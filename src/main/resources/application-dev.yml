@@ -102,9 +102,9 @@ wx:
     #企微通知背景
     wechatNoticeIllustration: static/defaultEnterpriseWechatNoticeIllustration.png
 
-# Qwen AI Configuration
-qwen:
-  api-key: ${QWEN_API_KEY:sk-placeholder}
-  api-url: ${QWEN_API_URL:https://api.llmhub.com.cn/v1/chat/completions}
-  model: ${QWEN_MODEL:qwen3.5-flash}
-  timeout: 30000
+# AI Configuration
+ai:
+  api-key: ${AI_API_KEY:tp-ckfhrvn08oio531bde2x5gtulk878jnu2r0o77gr2cfrfvne}
+  api-url: ${AI_API_URL:https://token-plan-cn.xiaomimimo.com/v1/chat/completions}
+  model: ${AI_MODEL:MiMo-V2.5-Pro}
+  timeout: 60000

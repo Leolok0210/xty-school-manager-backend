@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "qwen")
-public class QwenConfig {
+@ConfigurationProperties(prefix = "ai")
+public class AiConfig {
     private String apiKey;
     private String apiUrl;
     private String model;

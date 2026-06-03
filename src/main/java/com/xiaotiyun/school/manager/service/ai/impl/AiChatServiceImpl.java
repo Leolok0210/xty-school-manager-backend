@@ -5,7 +5,7 @@ import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.xiaotiyun.school.manager.config.QwenConfig;
+import com.xiaotiyun.school.manager.config.AiConfig;
 import com.xiaotiyun.school.manager.model.entity.AiChatMessageEntity;
 import com.xiaotiyun.school.manager.model.entity.AiChatSessionEntity;
 import com.xiaotiyun.school.manager.model.entity.AiKnowledgeBaseEntity;
@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 public class AiChatServiceImpl implements AiChatService {
 
     @Resource
-    private QwenConfig qwenConfig;
+    private AiConfig aiConfig;
 
     @Resource
     private AiSkillRegistry skillRegistry;
@@ -313,7 +313,7 @@ private Long getCurrentSchoolId() {
             }
         }
 
-        request.put("model", qwenConfig.getModel());
+        request.put("model", aiConfig.getModel());
         request.put("messages", messages);
         request.put("tools", JSON.parseArray(JSON.toJSONString(skillRegistry.getToolDefinitions())));
         request.put("tool_choice", "auto");
@@ -545,10 +545,10 @@ private Long getCurrentSchoolId() {
 
         while (attempt < maxRetries) {
             try {
-                return HttpUtil.createPost(qwenConfig.getApiUrl())
-                        .header("Authorization", "Bearer " + qwenConfig.getApiKey())
+                return HttpUtil.createPost(aiConfig.getApiUrl())
+                        .header("Authorization", "Bearer " + aiConfig.getApiKey())
                         .header("Content-Type", "application/json")
-                        .timeout(qwenConfig.getTimeout() != null ? qwenConfig.getTimeout() : 30000)
+                        .timeout(aiConfig.getTimeout() != null ? aiConfig.getTimeout() : 30000)
                         .body(qwenRequest.toJSONString())
                         .execute()
                         .body();
