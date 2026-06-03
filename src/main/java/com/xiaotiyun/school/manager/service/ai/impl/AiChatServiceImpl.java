@@ -381,6 +381,33 @@ private Long getCurrentSchoolId() {
                                         resModel.getDataCards().addAll(studentCards);
                                     }
                                 }
+                                // 檢查用戶是否詢問成績，如果是則自動查詢成績
+                                boolean isGradeQuery = isGradeRelatedQuery(reqModel);
+                                if (isGradeQuery) {
+                                    // 從學生結果中提取學生ID
+                                    List<Long> studentIds = extractStudentIdsFromResult(studentResult);
+                                    if (!studentIds.isEmpty()) {
+                                        AiSkill gradeSkill = skillRegistry.get("check_semester_grades");
+                                        if (gradeSkill != null) {
+                                            for (Long studentId : studentIds) {
+                                                JSONObject gradeArgs = new JSONObject();
+                                                gradeArgs.put("studentId", studentId);
+                                                SkillResult gradeResult = gradeSkill.execute(gradeArgs, context);
+                                                if (gradeResult.getMessage() != null && !gradeResult.getMessage().isEmpty()) {
+                                                    sb.append("\n\n").append(gradeResult.getMessage());
+                                                }
+                                                if (gradeResult.getDataCards() != null && !gradeResult.getDataCards().isEmpty()) {
+                                                    List<AiChatResModel.DataCard> gradeCards = convertToDataCards(gradeResult.getDataCards(), "check_semester_grades");
+                                                    if (resModel.getDataCards() == null) {
+                                                        resModel.setDataCards(gradeCards);
+                                                    } else {
+                                                        resModel.getDataCards().addAll(gradeCards);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         resModel.setContent(sb.toString());
@@ -457,6 +484,47 @@ private Long getCurrentSchoolId() {
         List<AiChatResModel.DataCard> result = new ArrayList<>();
         result.add(card);
         return result;
+    }
+
+    private boolean isGradeRelatedQuery(AiChatReqModel reqModel) {
+        if (reqModel.getMessages() == null || reqModel.getMessages().isEmpty()) {
+            return false;
+        }
+        // 檢查最後一條用戶消息是否包含成績相關關鍵詞
+        for (int i = reqModel.getMessages().size() - 1; i >= 0; i--) {
+            AiChatReqModel.ChatMessage msg = reqModel.getMessages().get(i);
+            if ("user".equals(msg.getRole())) {
+                String content = msg.getContent().toLowerCase();
+                return content.contains("成績") || content.contains("分數") ||
+                       content.contains("物理") || content.contains("數學") ||
+                       content.contains("英文") || content.contains("中文") ||
+                       content.contains("化學") || content.contains("生物") ||
+                       content.contains("歷史") || content.contains("地理") ||
+                       content.contains("科目");
+            }
+        }
+        return false;
+    }
+
+    private List<Long> extractStudentIdsFromResult(SkillResult studentResult) {
+        List<Long> studentIds = new ArrayList<>();
+        if (studentResult.getDataCards() != null) {
+            for (Map<String, Object> card : studentResult.getDataCards()) {
+                Object idObj = card.get("id");
+                if (idObj != null) {
+                    if (idObj instanceof Long) {
+                        studentIds.add((Long) idObj);
+                    } else if (idObj instanceof Integer) {
+                        studentIds.add(((Integer) idObj).longValue());
+                    } else if (idObj instanceof String) {
+                        try {
+                            studentIds.add(Long.parseLong((String) idObj));
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+        }
+        return studentIds;
     }
 
     private String getCardTitle(String skillName) {
