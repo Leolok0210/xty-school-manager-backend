@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xiaotiyun.school.manager.dao.SchoolMajorDao">
+
+
+    <select id="getSchoolMajorList" resultType="com.xiaotiyun.school.manager.model.entity.SchoolMajor">
+        select * from school_major
+        where school_id = #{reqModel.schoolId} and deleted = 0
+        <if test="reqModel.majorName != null and '' != reqModel.majorName">
+            and major_name like concat('%',#{reqModel.majorName},'%')
+        </if>
+        <if test="subjectIds != null">
+            and
+            <foreach collection="subjectIds" item="subjectId" open="(" separator="or" close=")">
+                 FIND_IN_SET(#{subjectId}, major_subjects)
+            </foreach>
+        </if>
+        order by create_time desc
+    </select>
+</mapper>

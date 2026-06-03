@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.SchoolCalendarDateTypeDao">
+    <select id="getSchoolIdWeekDayInfo" resultType="com.xiaotiyun.school.manager.model.entity.SchoolCalendarDateTypeEntity">
+        SELECT scdt.*
+        FROM school_calendar_date_type scdt
+                 LEFT JOIN school_calendar sc ON sc.id = scdt.school_calendar_id
+        WHERE scdt.deleted = 0
+          AND sc.deleted = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND sc.school_id = #{schoolId}
+        </if>
+        <if test="type != null and type > 0">
+            AND scdt.type = #{type}
+        </if>
+        <if test="applyType != null and applyType > 0">
+            AND scdt.apply_type = #{applyType}
+        </if>
+        <if test="startDate != null">
+            AND scdt.calendar_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND scdt.calendar_date &lt;= #{endDate}
+        </if>
+    </select>
+</mapper>

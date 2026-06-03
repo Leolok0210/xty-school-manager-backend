@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.ActivityVolunteerLensonDao">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.xiaotiyun.school.manager.model.entity.ActivityVolunteerLensonEntity">
+        <id column="id" property="id"/>
+        <result column="lenson_id" property="lensonId"/>
+        <result column="student_id" property="studentId"/>
+        <result column="apply_id" property="applyId"/>
+        <result column="volunteer_type" property="volunteerType"/>
+        <result column="create_time" property="createTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, lenson_id, student_id, apply_id, volunteer_type, create_time, deleted
+    </sql>
+
+</mapper> 

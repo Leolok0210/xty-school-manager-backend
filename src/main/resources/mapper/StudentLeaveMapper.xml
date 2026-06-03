@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.StudentLeaveDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.StudentLeavePageResModel">
+        SELECT sl.id                  AS id,
+               sl.school_id           AS schoolId,
+               sl.school_year         AS schoolYear,
+               grade.id               AS gradeId,
+               grade.grade_group_name AS gradeName,
+               sl.class_id            AS classId,
+               cla.class_name         AS className,
+               sl.student_id          AS studentId,
+               stu.chinese_name       AS studentName,
+               stu.seat_no            AS seatNo,
+               sl.leave_date          AS leaveDate,
+               sl.leave_type          AS leaveType,
+               sl.periods             AS periods,
+               sl.remark              AS remark,
+               sl.registrant_id       AS registrantId,
+               sl.registrant_name     AS registrantName,
+               sl.registrant_type     AS registrantType
+        FROM student_leave sl
+                 LEFT JOIN student_info stu ON stu.id = sl.student_id
+                 LEFT JOIN sys_class cla ON cla.id = sl.class_id
+                 LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+        WHERE sl.deleted = 0
+        <if test="reqModel.schoolId != null">
+            AND sl.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null">
+            AND sl.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND sl.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
+            AND sl.class_id IN
+            <foreach collection="reqModel.classIds" item="classId" open="(" separator="," close=")">
+                #{classId}
+            </foreach>
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND sl.student_id = #{reqModel.studentId}
+        </if>
+        <if test="reqModel.leaveType != null and reqModel.leaveType > 0">
+            AND sl.leave_type = #{reqModel.leaveType}
+        </if>
+        <if test="reqModel.leaveDate != null">
+            AND sl.leave_date = #{reqModel.leaveDate}
+        </if>
+        <if test="reqModel.classIdList != null and reqModel.classIdList.size() > 0">
+            AND sl.class_id IN
+            <foreach collection="reqModel.classIdList" item="classId" open="(" separator="," close=")">
+                #{classId}
+            </foreach>
+        </if>
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectStudentLeaveStatistics" resultType="com.xiaotiyun.school.manager.model.res.StudentLeaveStatisticsResModel">
+        SELECT 
+            student_id as studentId,
+            leave_type as leaveType,
+            SUM(periods) as totalPeriods
+        FROM 
+            student_leave
+        WHERE 
+            school_id = #{schoolId}
+            AND deleted = 0
+            <if test="classId != null">
+                AND class_id = #{classId}
+            </if>
+            <if test="studentIds != null and studentIds.size() > 0">
+                AND student_id IN
+                <foreach collection="studentIds" item="studentId" open="(" separator="," close=")">
+                    #{studentId}
+                </foreach>
+            </if>
+        GROUP BY 
+            student_id, leave_type
+    </select>
+
+    <select id="selectStudentLeaveCountBySemester" resultType="com.xiaotiyun.school.manager.model.res.StudentLeaveStatisticsResModel">
+        SELECT 
+            student_id as studentId,
+            leave_type as leaveType,
+            SUM(periods) as totalPeriods
+        FROM 
+            student_leave
+        WHERE 
+            leave_date >= #{semesterStart}
+            AND #{semesterEnd} >= leave_date
+            AND class_id = #{classId}
+            AND deleted = 0
+        GROUP BY 
+            student_id, leave_type
+    </select>
+</mapper>

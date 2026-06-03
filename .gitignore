@@ -1,0 +1,9 @@
+/.idea/
+/target/
+/.log/
+/project_rules.md/
+
+/logs/*.log
+logs/
+target/
+*.jar

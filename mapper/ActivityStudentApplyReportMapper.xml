@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.ActivityStudentApplyReportDao">
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.xiaotiyun.school.manager.model.entity.ActivityStudentApplyReportEntity">
+        <id column="id" property="id"/>
+        <result column="activity_id" property="activityId"/>
+        <result column="student_id" property="studentId"/>
+        <result column="type" property="type"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, activity_id, student_id, type, status, create_time, update_time, deleted
+    </sql>
+
+    <!-- 查询二次报名和没有二次报名但未匹配课程的学生 -->
+    <select id="querySecondApplyAndUnmatchedStudents"
+            resultType="com.xiaotiyun.school.manager.model.dto.ActivityStudentApplyReportQueryDTO">
+        SELECT
+        si.chinese_name AS studentName,
+        si.id AS studentId,
+        si.student_no AS studentNo,
+        asr.lenson_id AS matchedCourseId,
+        sc.class_name as className,
+        gg.grade_group_name AS gradeGroupName
+        FROM
+        sys_class sc
+        LEFT JOIN student_info si ON sc.id = si.class_id
+        LEFT JOIN grade_group gg ON sc.grade_group = gg.id
+        LEFT JOIN activity_student_apply_report asar ON (
+        si.id = asar.student_id
+        AND asar.activity_id = #{reqModel.activityId}
+        AND asar.deleted = 0
+        )
+        LEFT JOIN activity_student_report asr ON (
+        si.id = asr.student_id
+        AND asr.activity_id = #{reqModel.activityId}
+        AND asr.deleted = 0
+        )
+        WHERE
+        sc.school_id = #{schoolId}
+        AND sc.department = #{department}
+        AND sc.sid = #{schoolYear}
+        AND sc.deleted = 0
+        AND si.deleted = 0
+        AND (
+        -- 二次报名的学生
+        asar.type = 2
+        OR
+        -- 没有二次报名但是他没有匹配上课程的学生
+        (asar.type is null AND asr.id IS NULL)
+        )
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND sc.id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentName != null and reqModel.studentName != ''">
+            AND si.chinese_name LIKE CONCAT('%', #{reqModel.studentName}, '%')
+        </if>
+        <if test="reqModel.studentNo != null and reqModel.studentNo != ''">
+            AND si.student_no LIKE CONCAT('%', #{reqModel.studentNo}, '%')
+        </if>
+        <if test="reqModel.matchStatus != null and reqModel.matchStatus != -1">
+            <choose>
+                <when test="reqModel.matchStatus == 1">
+                    -- 匹配成功：有匹配课程
+                    AND asr.id IS NOT NULL
+                </when>
+                <when test="reqModel.matchStatus == 2">
+                    -- 匹配失败：没有匹配课程
+                    AND asr.id IS NULL
+                </when>
+            </choose>
+        </if>
+        ORDER BY si.id
+    </select>
+
+    <!-- 查询活动二次报名总人数 -->
+    <select id="countSecondApplyStudents" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT asar.student_id)
+        FROM activity_student_apply_report asar
+        WHERE asar.activity_id = #{activityId}
+          AND asar.type = 2
+          AND asar.deleted = 0
+    </select>
+
+    <!-- 通过连表查询获取学生报名记录和志愿信息 -->
+    <select id="selectStudentVolunteersByActivity"
+            resultType="com.xiaotiyun.school.manager.model.entity.ActivityVolunteerLensonEntity">
+        SELECT avl.id,
+               avl.activity_id,
+               avl.apply_id,
+               avl.student_id,
+               avl.lenson_id,
+               avl.volunteer_type,
+               avl.create_time,
+               avl.update_time,
+               avl.deleted
+        FROM (
+                 -- 获取每个学生最新的报名记录ID
+                 SELECT student_id,
+                        MAX(id) as latest_apply_id
+                 FROM activity_student_apply_report
+                 WHERE activity_id = #{activityId}
+                   AND type = #{applyType}
+                   AND status != 2
+                   AND deleted = 0
+                 GROUP BY student_id) latest_apply
+                 left join activity_volunteer_lenson avl ON avl.apply_id = latest_apply.latest_apply_id
+        WHERE avl.activity_id = #{activityId}
+          AND avl.deleted = 0
+        ORDER BY avl.student_id, avl.volunteer_type
+    </select>
+
+    <!-- 已录取名单列表 -->
+    <select id="admittedList"
+            resultType="com.xiaotiyun.school.manager.model.res.ActivityStudentApplyAdmittedListResModel">
+        SELECT
+        asr.id AS id,
+        grade.grade_group_name AS gradeGroupName,
+        cla.class_name AS className,
+        stu.seat_no AS seatNo,
+        stu.id AS studentId,
+        stu.chinese_name AS studentName,
+        stu.student_no AS studentNo,
+        lacr.`name` AS courseName,
+        asr.type AS type
+        FROM
+        activity_student_report asr
+        LEFT JOIN student_info stu ON stu.id = asr.student_id
+        LEFT JOIN sys_class cla ON cla.id = stu.class_id
+        LEFT JOIN grade_group grade ON cla.grade_group = grade.id
+        LEFT JOIN leisure_activity_courses_record lacr ON lacr.id = asr.lenson_id
+        WHERE
+        asr.deleted = 0
+        <if test="reqModel.activityId != null and reqModel.activityId > 0">
+            AND asr.activity_id = #{reqModel.activityId}
+        </if>
+        <if test="reqModel.coursesId != null and reqModel.coursesId > 0">
+            AND asr.lenson_id = #{reqModel.coursesId}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND stu.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentName != null and reqModel.studentName != ''">
+            AND stu.chinese_name LIKE CONCAT('%', #{reqModel.studentName}, '%')
+        </if>
+        <if test="reqModel.studentNo != null and reqModel.studentNo != ''">
+            AND stu.student_no LIKE CONCAT('%', #{reqModel.studentNo}, '%')
+        </if>
+        <if test="reqModel.type != null and reqModel.type == 1">
+            AND asr.type IN (1,2,3)
+        </if>
+        <if test="reqModel.type != null and reqModel.type == 2">
+            AND asr.type IN (4,5)
+        </if>
+        <if test="classIds != null and classIds.size() > 0">
+            AND stu.class_id IN
+            <foreach item="item" collection="classIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY
+        CASE grade.grade
+        WHEN '中六' THEN 1
+        WHEN '中五' THEN 2
+        WHEN '中四' THEN 3
+        WHEN '中三' THEN 4
+        WHEN '中二' THEN 5
+        WHEN '中一' THEN 6
+        WHEN '六年級' THEN 7
+        WHEN '五年級' THEN 8
+        WHEN '四年級' THEN 9
+        WHEN '三年級' THEN 10
+        WHEN '二年級' THEN 11
+        WHEN '一年級' THEN 12
+        WHEN '幼三' THEN 13
+        WHEN '幼二' THEN 14
+        WHEN '幼一' THEN 15
+        ELSE 999
+        END ASC,
+        cla.class_serial_number DESC,
+        stu.seat_no IS NULL,
+        stu.seat_no ASC
+    </select>
+
+    <!-- 未录取名单列表 -->
+    <select id="notAdmittedList"
+            resultType="com.xiaotiyun.school.manager.model.res.ActivityStudentApplyNotAdmittedListResModel">
+        SELECT
+        asar.id AS id,
+        stu.id AS studentId,
+        grade.grade_group_name AS gradeGroupName,
+        cla.class_name AS className,
+        stu.seat_no AS seatNo,
+        stu.chinese_name AS studentName,
+        stu.student_no AS studentNo,
+        asar.type AS type,
+        asar.create_time AS createTime
+        FROM
+        activity_student_apply_report asar
+        LEFT JOIN student_info stu ON stu.id = asar.student_id
+        LEFT JOIN sys_class cla ON cla.id = stu.class_id
+        LEFT JOIN grade_group grade ON cla.grade_group = grade.id
+        WHERE
+        asar.deleted = 0 AND asar.status = 3
+        <if test="reqModel.activityId != null and reqModel.activityId > 0">
+            AND asar.activity_id = #{reqModel.activityId}
+        </if>
+        <if test="reqModel.type != null and reqModel.type > 0">
+            AND asar.type = #{reqModel.type}
+        </if>
+        <if test="classIds != null and classIds.size() > 0">
+            AND stu.class_id IN
+            <foreach item="item" collection="classIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY
+        CASE grade.grade
+        WHEN '中六' THEN 1
+        WHEN '中五' THEN 2
+        WHEN '中四' THEN 3
+        WHEN '中三' THEN 4
+        WHEN '中二' THEN 5
+        WHEN '中一' THEN 6
+        WHEN '六年級' THEN 7
+        WHEN '五年級' THEN 8
+        WHEN '四年級' THEN 9
+        WHEN '三年級' THEN 10
+        WHEN '二年級' THEN 11
+        WHEN '一年級' THEN 12
+        WHEN '幼三' THEN 13
+        WHEN '幼二' THEN 14
+        WHEN '幼一' THEN 15
+        ELSE 999
+        END ASC,
+        cla.class_serial_number DESC,
+        stu.seat_no IS NULL,
+        stu.seat_no ASC
+    </select>
+
+    <!-- 报名名单列表 -->
+    <select id="registeredList"
+            resultType="com.xiaotiyun.school.manager.model.res.ActivityStudentApplyRegisteredListResModel">
+        SELECT
+        asar.id AS id,
+        stu.id AS studentId,
+        grade.grade_group_name AS gradeGroupName,
+        cla.class_name AS className,
+        stu.seat_no AS seatNo,
+        stu.chinese_name AS studentName,
+        stu.student_no AS studentNo,
+        asar.type AS type,
+        asar.create_time AS createTime
+        FROM
+        activity_student_apply_report asar
+        LEFT JOIN student_info stu ON stu.id = asar.student_id
+        LEFT JOIN sys_class cla ON cla.id = stu.class_id
+        LEFT JOIN grade_group grade ON cla.grade_group = grade.id
+        WHERE
+        asar.deleted = 0
+        <if test="reqModel.activityId != null and reqModel.activityId > 0">
+            AND asar.activity_id = #{reqModel.activityId}
+        </if>
+        <if test="reqModel.type != null and reqModel.type > 0">
+            AND asar.type = #{reqModel.type}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND stu.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentName != null and reqModel.studentName != ''">
+            AND stu.chinese_name LIKE CONCAT('%', #{reqModel.studentName}, '%')
+        </if>
+        <if test="reqModel.studentNo != null and reqModel.studentNo != ''">
+            AND stu.student_no LIKE CONCAT('%', #{reqModel.studentNo}, '%')
+        </if>
+        <if test="classIds != null and classIds.size() > 0">
+            AND stu.class_id IN
+            <foreach item="item" collection="classIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY
+        CASE grade.grade
+        WHEN '中六' THEN 1
+        WHEN '中五' THEN 2
+        WHEN '中四' THEN 3
+        WHEN '中三' THEN 4
+        WHEN '中二' THEN 5
+        WHEN '中一' THEN 6
+        WHEN '六年級' THEN 7
+        WHEN '五年級' THEN 8
+        WHEN '四年級' THEN 9
+        WHEN '三年級' THEN 10
+        WHEN '二年級' THEN 11
+        WHEN '一年級' THEN 12
+        WHEN '幼三' THEN 13
+        WHEN '幼二' THEN 14
+        WHEN '幼一' THEN 15
+        ELSE 999
+        END ASC,
+        cla.class_serial_number DESC,
+        stu.seat_no IS NULL,
+        stu.seat_no ASC,
+        asar.type ASC
+    </select>
+
+    <!-- 未报名名单列表 -->
+    <select id="notRegisteredList"
+            resultType="com.xiaotiyun.school.manager.model.res.ActivityStudentApplyNotRegisteredListResModel">
+        SELECT
+        stu.id AS studentId,
+        grade.grade_group_name AS gradeGroupName,
+        cla.class_name AS className,
+        stu.seat_no AS seatNo,
+        stu.chinese_name AS studentName,
+        stu.student_no AS studentNo
+        FROM
+        sys_class cla
+        INNER JOIN student_info stu ON cla.id = stu.class_id
+        LEFT JOIN grade_group grade ON cla.grade_group = grade.id
+        LEFT JOIN activity_student_apply_report asar ON (stu.id = asar.student_id AND asar.deleted = 0 AND
+        asar.activity_id = #{reqModel.activityId})
+        LEFT JOIN activity_student_report asr ON (stu.id = asr.student_id AND asr.activity_id = #{reqModel.activityId}
+        AND asr.type = 1 AND asr.deleted = 0)
+        WHERE
+        cla.deleted = 0
+        AND stu.deleted = 0
+        AND cla.school_id = #{schoolId}
+        AND cla.sid = #{schoolYear}
+        AND cla.department = #{department}
+        AND asr.id IS NULL
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND cla.id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentName != null and reqModel.studentName != ''">
+            AND stu.chinese_name LIKE CONCAT('%', #{reqModel.studentName}, '%')
+        </if>
+        <if test="reqModel.studentNo != null and reqModel.studentNo != ''">
+            AND stu.student_no LIKE CONCAT('%', #{reqModel.studentNo}, '%')
+        </if>
+        <if test="classIds != null and classIds.size() > 0">
+            AND stu.class_id IN
+            <foreach item="item" collection="classIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        GROUP BY
+        stu.id
+        HAVING
+        COUNT(asar.id) = 0
+        ORDER BY
+        CASE grade.grade
+        WHEN '中六' THEN 1
+        WHEN '中五' THEN 2
+        WHEN '中四' THEN 3
+        WHEN '中三' THEN 4
+        WHEN '中二' THEN 5
+        WHEN '中一' THEN 6
+        WHEN '六年級' THEN 7
+        WHEN '五年級' THEN 8
+        WHEN '四年級' THEN 9
+        WHEN '三年級' THEN 10
+        WHEN '二年級' THEN 11
+        WHEN '一年級' THEN 12
+        WHEN '幼三' THEN 13
+        WHEN '幼二' THEN 14
+        WHEN '幼一' THEN 15
+        ELSE 999
+        END ASC,
+        cla.class_serial_number DESC,
+        stu.seat_no IS NULL,
+        stu.seat_no ASC
+    </select>
+</mapper>

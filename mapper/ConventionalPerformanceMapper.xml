@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.ConventionalPerformanceDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.ConventionalPerformancePageResModel">
+        SELECT
+        cp.id AS id,
+        cp.sid AS sid,
+        cp.term AS term,
+        sem.`name` AS termName,
+        gra.grade_group_name AS gradeGroupName,
+        cp.class_id AS classId,
+        cla.class_name AS className,
+        cp.student_id AS studentId,
+        stu.chinese_name AS studentName,
+        cp.date AS date,
+        cp.type AS type,
+        cp.frequency AS frequency,
+        cp.remark AS remark,
+        cp.create_id AS createId,
+        susr.username AS createName,
+        cp.create_time AS createTime
+        FROM
+        conventional_performance cp
+        LEFT JOIN sys_semester sem ON sem.id = cp.term
+        LEFT JOIN sys_class cla ON cla.id = cp.class_id
+        LEFT JOIN grade_group gra ON gra.id = cla.grade_group
+        LEFT JOIN student_info stu ON stu.id = cp.student_id
+        LEFT JOIN sys_user_school_rel susr ON susr.school_id = cp.school_id AND susr.user_id = cp.create_id AND
+        susr.deleted = 0
+        WHERE
+        cp.deleted = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND cp.school_id = #{schoolId}
+        </if>
+        <if test="reqModel.sid != null and reqModel.sid != ''">
+            AND cp.sid = #{reqModel.sid}
+        </if>
+        <if test="reqModel.term != null and reqModel.term > 0">
+            AND cp.term = #{reqModel.term}
+        </if>
+        <if test="reqModel.department != null and reqModel.department > 0">
+            AND sem.department = #{reqModel.department}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND cp.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND cp.student_id = #{reqModel.studentId}
+        </if>
+        <if test="reqModel.type != null and reqModel.type > 0">
+            AND cp.type = #{reqModel.type}
+        </if>
+        <if test="reqModel.eventStartDate != null">
+            AND cp.date &gt;= #{reqModel.eventStartDate}
+        </if>
+        <if test="reqModel.eventEndDate != null">
+            AND cp.date &lt;= #{reqModel.eventEndDate}
+        </if>
+        <if test="reqModel.createStartDate != null">
+            AND cp.create_time &gt;= CONCAT(#{reqModel.createStartDate}, ' 00:00:00')
+        </if>
+        <if test="reqModel.createEndDate != null">
+            AND cp.create_time &lt;= CONCAT(#{reqModel.createEndDate}, ' 23:59:59')
+        </if>
+        ORDER BY
+        cp.create_time DESC
+    </select>
+</mapper>

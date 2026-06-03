@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xiaotiyun.school.manager.dao.SysClassDao">
+    <select id="selectSysClassListBySchoolId" resultType="com.xiaotiyun.school.manager.model.res.SysClassListResModel">
+        SELECT
+            sc.id AS classId,
+            gg.grade_group_name      AS groupName,
+            sc.class_name AS className,
+            gg.id        AS groupId,
+            sc.department AS department
+        FROM
+            sys_class sc left join grade_group gg on sc.grade_group = gg.id
+        WHERE
+            sc.school_id = #{schoolId}
+          AND sc.deleted = 0
+    </select>
+
+    <!-- 新增SQL：根据学校ID和sid查询班级列表 -->
+    <select id="selectSysClassListBySchoolIdAndSid" resultType="com.xiaotiyun.school.manager.model.res.SysClassListResModel">
+        SELECT sc.id         AS classId,
+               gg.grade_group_name      AS groupName,
+               gg.grade      AS grade,
+               sc.class_name AS className,
+               gg.id        AS groupId,
+               sc.department AS department
+        FROM sys_class sc
+                 left join grade_group gg on sc.grade_group = gg.id
+        WHERE sc.school_id = #{schoolId}
+          AND sc.sid = #{sid}
+          AND sc.deleted = 0
+    </select>
+    <select id="selectSysClassListByGradeGroupNames"
+            resultType="com.xiaotiyun.school.manager.model.res.SysClassListResModel">
+        SELECT
+            sc.id AS classId,
+            sc.class_name AS className,
+            gg.grade_group_name AS groupName,
+            gg.id AS groupId,
+            sc.department AS department
+        FROM
+            sys_class sc left join grade_group gg on sc.grade_group = gg.id
+        WHERE
+            sc.school_id = #{schoolId}
+          AND sc.sid = #{sid}
+          AND sc.deleted = 0
+          AND gg.deleted = 0
+          AND gg.grade IN
+          <foreach collection="gradeGroupNames" item="gradeGroupName" open="(" separator="," close=")">
+              #{gradeGroupName}
+          </foreach>
+    </select>
+    <select id="getMaxClassSerialNumberByGradeGroupAndSid" resultType="java.lang.Integer">
+        SELECT
+            MAX(sc.class_serial_number) AS maxClassSerialNumber
+        FROM
+            sys_class sc
+        WHERE
+            sc.school_id = #{schoolId}
+          AND sc.sid = #{sid}
+          AND sc.grade_group = #{gradeGroupId}
+          AND sc.deleted = 0
+    </select>
+    <select id="selectSysClassListBySchoolIdAndSidAndGradeGroupId"
+            resultType="com.xiaotiyun.school.manager.model.res.SysClassListResModel">
+        SELECT
+            sc.id AS classId,
+            sc.class_name AS className,
+            gg.id        AS groupId,
+            sc.department AS department,
+            gg.grade_group_name AS groupName
+        FROM
+            sys_class sc left join grade_group gg on sc.grade_group = gg.id
+        WHERE
+            sc.school_id = #{schoolId}
+          AND sc.deleted = 0
+          AND sc.sid = #{sid}
+          AND sc.grade_group = #{gradeGroupId}
+    </select>
+    <select id="getClassNameByGradeGroupAndSid" resultType="java.lang.Integer">
+        SELECT
+            COUNT(*) as count
+        FROM
+            sys_class sc left join grade_group gg on sc.grade_group = gg.id
+        WHERE
+            sc.school_id = #{schoolId}
+          AND sc.class_name = #{className}
+          AND sc.deleted = 0
+          AND gg.deleted = 0
+          AND gg.grade = #{gradeGroup}
+          and sc.sid = #{sid}
+    </select>
+    <select id="getClassSerialNumberByGradeGroupAndSid" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1) as count
+        FROM
+            sys_class sc left join grade_group gg on sc.grade_group = gg.id
+        WHERE
+            sc.school_id = #{schoolId}
+          AND sc.deleted = 0
+          AND sc.class_serial_number = #{classSerialNumber}
+          AND gg.deleted = 0
+          AND gg.grade = #{gradeGroup}
+          and sc.sid = #{sid}
+    </select>
+    <select id="selectSysClassList" resultType="com.xiaotiyun.school.manager.model.res.SysClassListResModel">
+        SELECT sc.id         AS classId,
+               gg.grade_group_name      AS groupName,
+               sc.class_name AS className,
+               gg.id        AS groupId,
+               sc.department AS department
+        FROM sys_class sc
+                 left join grade_group gg on sc.grade_group = gg.id
+        WHERE sc.school_id = #{schoolId}
+        <if test="sid != null and '' != sid">
+            AND sc.sid = #{sid}
+        </if>
+          AND sc.deleted = 0
+        <if test="department != null">
+            AND sc.department = #{department}
+        </if>
+    </select>
+    <select id="selectClassList" resultType="com.xiaotiyun.school.manager.model.res.SysClassListResModel">
+        SELECT 
+            sc.id AS classId,
+            sc.class_name AS className,
+            gg.grade_group_name AS groupName,
+            gg.grade AS grade,
+            gg.id AS groupId,
+            sc.department AS department
+        FROM 
+            sys_class sc
+            LEFT JOIN grade_group gg ON sc.grade_group = gg.id
+        WHERE 
+            sc.deleted = 0
+            AND sc.school_id = #{schoolId}
+            <if test="schoolYear != null and schoolYear != ''">
+                AND sc.sid = #{schoolYear}
+            </if>
+            <if test="gradeGroupId != null">
+                AND sc.grade_group = #{gradeGroupId}
+            </if>
+            <if test="department != null">
+                AND sc.department = #{department}
+            </if>
+            <if test="classIds != null and classIds.size() > 0">
+                AND sc.id IN
+                <foreach collection="classIds" item="classId" open="(" separator="," close=")">
+                    #{classId}
+                </foreach>
+            </if>
+    </select>
+</mapper>

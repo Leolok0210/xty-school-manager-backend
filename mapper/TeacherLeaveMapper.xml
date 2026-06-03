@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.TeacherLeaveDao">
+    
+    <sql id="Base_Column_List">
+        id, school_id, teacher_id, leave_type, start_time, end_time, reason, 
+        create_time, update_time, deleted
+    </sql>
+
+    <select id="selectPage" resultType="com.xiaotiyun.school.manager.model.entity.TeacherLeaveEntity">
+        SELECT <include refid="Base_Column_List"/>
+        FROM teacher_leave
+        WHERE deleted = 0
+        <if test="ew.schoolId != null">
+            AND school_id = #{ew.schoolId}
+        </if>
+        <!-- 其他查询条件 -->
+    </select>
+</mapper> 

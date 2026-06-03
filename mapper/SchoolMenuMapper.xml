@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.SchoolMenuDao">
+    <insert id="insertBatch">
+        INSERT INTO sys_school_menu(school_id, menu_id, create_time, update_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.schoolId}, #{item.menuId}, NOW(), NOW())
+        </foreach>
+    </insert>
+</mapper> 

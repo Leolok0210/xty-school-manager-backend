@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xiaotiyun.school.manager.dao.BigLittleRestDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.BigLittleRestResModel">
+        SELECT  blr.id                     AS id,
+                blr.school_year            AS schoolYear,
+                ss.id                      AS semesterId,
+                ss.name                    AS semesterName,
+                grade.id                   AS classGroupId,
+                grade.grade_group_name     AS classGroupName,
+                cla.id                     AS classId,
+                cla.class_name             AS className,
+                blr.student_id             AS studentId,
+                stu.chinese_name           AS studentName,
+                blr.registration_date      AS registrationDate,
+                blr.type                   AS type,
+                blr.registration_id        AS registrationId,
+                blr.registration_content   AS registrationContent,
+                blr.registrant             AS registrant
+        FROM big_little_rest blr
+        LEFT JOIN student_info stu ON stu.id = blr.student_id
+        LEFT JOIN sys_class cla ON cla.id = stu.class_id
+        LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+        LEFT JOIN sys_semester ss on blr.semester_id = ss.id
+        WHERE blr.deleted = 0
+        <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
+            AND blr.school_id = ${reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null and reqModel.schoolYear != ''">
+            AND blr.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.semesterId != null and reqModel.semesterId > 0">
+            AND blr.semester_id = ${reqModel.semesterId}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND blr.class_id = ${reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND blr.student_id = ${reqModel.studentId}
+        </if>
+        <if test="reqModel.startDate != null and reqModel.startDate != ''">
+            AND blr.registration_date &gt;= #{reqModel.startDate}
+        </if>
+        <if test="reqModel.endDate != null and reqModel.endDate != ''">
+            AND blr.registration_date &lt;= #{reqModel.endDate}
+        </if>
+        <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
+            AND blr.class_id IN
+            <foreach item="item" index="index" collection="reqModel.classIds"
+                     open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY blr.create_time desc
+    </select>
+</mapper>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.SubjectRelDao">
+
+    <resultMap id="BaseResultMap" type="com.xiaotiyun.school.manager.model.entity.SubjectRelEntity">
+        <id column="id" property="id" />
+        <result column="group_id" property="groupId" />
+        <result column="subject_id" property="subjectId" />
+        <result column="number" property="number" />
+        <result column="counted_in_average" property="countedInAverage" />
+        <result column="arts_science" property="artsScience" />
+        <result column="subject_type" property="subjectType" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="deleted" property="deleted" />
+        <result column="school_id" property="schoolId" />
+        <result column="show_rule" property="showRule" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, group_id, subject_id, number, counted_in_average, arts_science, subject_type, create_time, update_time, deleted, school_id, show_rule
+    </sql>
+
+    <select id="selectSubjectAndRelByGroup" resultType="com.xiaotiyun.school.manager.model.res.SubjectRelResModel">
+        SELECT
+            sr.id,
+            sr.group_id,
+            sr.id,
+            sr.number,
+            sr.counted_in_average,
+            sr.arts_science,
+            sr.subject_type,
+            sr.school_id,
+            sr.show_rule,
+            s.id AS "subject.id",
+            s.subject_number AS "subject.subjectNumber",
+            s.subject_name AS "subject.subjectName",
+            s.subject_english_name AS "subject.subjectEnglishName",
+            s.unit AS "subject.unit",
+            s.create_time AS "subject.createTime",
+            s.update_time AS "subject.updateTime",
+            s.school_id AS "subject.schoolId",
+            s.scope AS "subject.scope"
+        FROM subject_rel sr
+        LEFT JOIN subject s ON sr.subject_id = s.id
+        WHERE sr.deleted = 0
+          AND sr.school_id = #{req.schoolId}
+        <if test="req.groupId != null and req.groupId > 0">
+            AND sr.group_id = #{req.groupId}
+        </if>
+        <if test="req.name != null">
+            AND s.subject_name LIKE CONCAT('%', #{req.name}, '%')
+        </if>
+        <if test="req.countedInAverage != null">
+            AND sr.counted_in_average = #{req.countedInAverage}
+        </if>
+        order by sr.number ASC
+    </select>
+    <select id="selectSubjectAndRelByIds"
+            resultType="com.xiaotiyun.school.manager.model.res.SubjectRelResModel">
+        SELECT
+            sr.id,
+            sr.group_id,
+            sr.id,
+            sr.number,
+            sr.counted_in_average,
+            sr.arts_science,
+            sr.subject_type,
+            sr.school_id,
+            sr.show_rule,
+            s.id AS "subject.id",
+            s.subject_number AS "subject.subjectNumber",
+            s.subject_name AS "subject.subjectName",
+            s.subject_english_name AS "subject.subjectEnglishName",
+            s.unit AS "subject.unit",
+            s.create_time AS "subject.createTime",
+            s.update_time AS "subject.updateTime",
+            s.school_id AS "subject.schoolId",
+            s.scope AS "subject.scope"
+        FROM subject_rel sr
+        LEFT JOIN subject s ON sr.subject_id = s.id
+        WHERE sr.deleted = 0
+          AND sr.id IN
+        <foreach item="item" collection="ids" separator="," open="(" close=")" index="">
+            #{item}
+        </foreach>
+    </select>
+
+</mapper> 

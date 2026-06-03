@@ -1,0 +1,110 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://117.88.94.20:13049/xty_school_manager?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_general_ci&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: root
+    password: 7XyQbbcdfgrG5*7w
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      # 初始连接数
+      initial-size: 5
+      # 最小连接池数量
+      min-idle: 10
+      # 最大连接池数量
+      max-active: 20
+      # 配置获取连接等待超时的时间
+      max-wait: 60000
+      # 配置间隔多久才进行一次检测,检测需要关闭的空闲连接,单位是毫秒
+      time-between-eviction-runs-millis: 60000
+      # 配置一个连接在池中最小生存的时间,单位是毫秒
+      min-evictable-idle-time-millis: 300000
+      # 配置一个连接在池中最大生存的时间,单位是毫秒
+      max-evictable-idle-time-millis: 900000
+      # 配置检测连接是否有效
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+mybatis-plus:
+  mapper-locations: classpath:mapper/*Mapper.xml
+  type-aliases-package: com.xiaotiyun.school.manager.model.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# Sa-Token配置
+sa-token:
+  # token名称 (同时也是cookie名称)
+  token-name: token
+  # token有效期，单位s 默认30天, -1代表永不过期
+  timeout: 2592000
+  # token临时有效期 (指定时间内无操作就视为token过期) 单位: 秒
+  activity-timeout: -1
+  # 是否允许同一账号并发登录 (为true时允许一起登录, 为false时新登录挤掉旧登录)
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个token (为true时所有登录共用一个token, 为false时每次登录新建一个token)
+  is-share: false
+  # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: false
+  # token存储方式，默认使用内存存储
+  token-strategy: memory
+
+file:
+  #文件上传根路径
+  fileRootPath: D:/test/file
+  #模板文件访问地址
+  templateUrl: D:/test/file/template/
+  #最大照片尺寸(300k)
+  maxFileSize: 307200
+  #最小照片尺寸(100k)
+  minFileSize: 102400
+  #学生请假上传照片最大尺寸(5M)
+  maxLeaveFileSize: 5242880
+  filePrefix: D:/test/file
+
+xtySchool:
+  report:
+    url: http://121.229.175.143:18085
+
+H5Url: https://www.baidu.com/
+
+wxApp:
+  teacher:
+    corpId: ww9cd3dd4ad9f44afa
+    providerSecret: uC1wWTVV1P_HCIiKS_sg0YPYv7yUlaJ_pa8f0frJT6j2BRvSRKYGRxRywp4oUkk8
+    name: 莱茵达智校通
+    suiteId: wwa0e9272595f27bbb
+    suiteSecret: aE74FwgdReetxqslyHg6OijMpv8eTJS_Y-sMm6mZIko
+    H5Url: http://192.168.8.131:5173/#/
+    token: 3DGoByIEEwXdBzU29V2aF
+    AESKey: LdmznarNe618o5u9daNw98UUMQWkKmcgUwESgF3WnZt
+  student:
+    corpId: ww9cd3dd4ad9f44afa
+    suiteId: wwe948859afe1af425
+    suiteSecret: vumcY6qpoz6bZEa3pC1sjgt3knXFQ8yz72iI1m9c8hI
+    H5Url: http://192.168.8.131:5173/#/
+    token: zsc5JWK5
+    AESKey: Hdj2Qt2aYTxYL5M3l3sWOvkN3QUObCLqlZh8MTLFXcw
+
+wx:
+  miniapp:
+    appid: wxbeb071451150de57
+    #    appid: wx6ab66b2e75b13d73
+    secret: e3d0805477f7cc1c15909235fd7a81e7
+    #    secret: a20cb6f610b2a87a3cf71385b2ed2307
+    url: https://api.weixin.qq.com/sns/jscode2session
+    indexPath: /pages/index/index
+    #企微通知背景
+    wechatNoticeIllustration: static/defaultEnterpriseWechatNoticeIllustration.png
+
+# Qwen AI Configuration
+qwen:
+  api-key: ${QWEN_API_KEY:sk-placeholder}
+  api-url: ${QWEN_API_URL:https://api.llmhub.com.cn/v1/chat/completions}
+  model: ${QWEN_MODEL:qwen3.5-flash}
+  timeout: 30000

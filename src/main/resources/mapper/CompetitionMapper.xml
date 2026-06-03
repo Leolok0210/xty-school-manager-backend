@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.CompetitionMapper">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.CompetitionPageResModel">
+        SELECT *
+        FROM competition_info WHERE deleted = 0
+        <if test="reqModel.schoolId != null">
+            AND school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null">
+            AND school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.competitionName != null">
+            AND competition_name LIKE CONCAT('%', #{reqModel.competitionName}, '%')
+        </if>
+        <if test="reqModel.startDateBegin != null">
+            AND end_date &gt;= #{reqModel.startDateBegin}
+        </if>
+        <if test="reqModel.startDateEnd != null">
+            AND start_date &lt;= #{reqModel.startDateEnd}
+        </if>
+        <if test="competitionIds != null and competitionIds.size() != 0">
+            AND id IN
+            <foreach collection="competitionIds" index="index" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY id DESC
+    </select>
+</mapper>

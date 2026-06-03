@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.ExternalCompetitionRecordMapper">
+    <select id="partakeCompetitionList" resultType="java.lang.Long">
+        SELECT DISTINCT rec.competition_id
+        FROM external_competition_record rec
+                 LEFT JOIN external_competition com ON com.id = rec.competition_id
+        WHERE rec.deleted = 0
+          AND com.deleted = 0
+        <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
+            AND com.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null">
+            AND com.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND rec.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND rec.student_id = #{reqModel.studentId}
+        </if>
+    </select>
+
+
+    <select id="getCompetitionRecords"
+            resultType="com.xiaotiyun.school.manager.model.dto.ExternalCompetitionRecordDTO">
+        SELECT rec.id,
+               rec.competition_id AS competitionId,
+               rec.student_id     AS studentId,
+               rec.prize_name AS prize
+        FROM external_competition_record rec
+            LEFT JOIN external_competition_group gro ON gro.id = rec.group_id
+            LEFT JOIN external_competition com ON com.id = rec.competition_id
+        WHERE rec.deleted = 0
+          AND rec.class_id = #{classId}
+          AND com.deleted = 0
+          AND rec.update_time >= #{semesterStart}
+          AND #{semesterEnd} >= rec.update_time
+    </select>
+    <select id="countRecordsByDateRange" resultType="com.xiaotiyun.school.manager.model.dto.StudentCountDTO">
+        SELECT student_id AS studentId, COUNT(*) AS count
+        FROM external_competition_record
+        WHERE update_time >= #{semesterStart}
+          AND #{semesterEnd} >= update_time
+          AND class_id = #{classId}
+        GROUP BY student_id
+    </select>
+</mapper>

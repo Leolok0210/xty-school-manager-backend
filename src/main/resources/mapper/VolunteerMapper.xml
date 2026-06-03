@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.VolunteerMapper">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.VolunteerResModel">
+        SELECT vol.id             AS id,
+               vol.school_id      AS schoolId,
+               vol.school_year    AS schoolYear,
+               grade.id           AS gradeId,
+               vol.grade_name     AS gradeName,
+               vol.class_id       AS classId,
+               vol.class_name     AS className,
+               vol.student_id     AS studentId,
+               stu.chinese_name   AS studentName,
+               stu.seat_no        AS seatNo,
+               vol.activity_name  AS activityName,
+               vol.organization   AS organization,
+               vol.service_date   AS serviceDate,
+               vol.start_time     AS startTime,
+               vol.end_time       AS endTime,
+               vol.service_nature AS serviceNature,
+               vol.service_type   AS serviceType,
+        vol.service_seconds   AS serviceSeconds
+        FROM volunteer_service vol
+                 LEFT JOIN student_info stu ON stu.id = vol.student_id
+                 LEFT JOIN sys_class cla ON cla.id = vol.class_id
+                 LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+        WHERE vol.deleted = 0
+        <if test="reqModel.schoolId != null">
+            AND vol.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null">
+            AND vol.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND vol.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND vol.student_id = #{reqModel.studentId}
+        </if>
+        <if test="reqModel.activityName != null and reqModel.activityName != ''">
+            AND vol.activity_name LIKE CONCAT('%', #{reqModel.activityName}, '%')
+        </if>
+        <if test="reqModel.serviceDateStart != null">
+            AND vol.service_date &gt;= #{reqModel.serviceDateStart}
+        </if>
+        <if test="reqModel.serviceDateEnd != null">
+            AND vol.service_date &lt;= #{reqModel.serviceDateEnd}
+        </if>
+        <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
+            AND vol.class_id IN
+            <foreach item="classId" collection="reqModel.classIds" separator="," open="(" close=")" index="">
+                #{classId}
+            </foreach>
+        </if>
+        ORDER BY id DESC
+    </select>
+    <select id="getVolunteerCount" resultType="com.xiaotiyun.school.manager.model.dto.StudentCountDTO">
+        SELECT SUM(vol.service_seconds) AS count,
+               vol.student_id  AS studentId
+        FROM volunteer_service vol
+        WHERE vol.deleted = 0
+          AND vol.class_id = #{classId}
+          AND vol.service_date >= #{startTime}
+          AND #{endTime} >= vol.service_date
+        GROUP BY vol.student_id
+    </select>
+    <select id="sumByStudent" resultType="com.xiaotiyun.school.manager.model.res.VolunteerResModel">
+        SELECT
+            vol.service_date   AS serviceDate,
+            vol.service_seconds   AS serviceSeconds
+        FROM volunteer_service vol
+        WHERE vol.deleted = 0
+            AND vol.school_id = ${schoolId}
+            AND vol.school_year = #{schoolYear}
+            AND vol.student_id = ${studentId}
+    </select>
+</mapper>

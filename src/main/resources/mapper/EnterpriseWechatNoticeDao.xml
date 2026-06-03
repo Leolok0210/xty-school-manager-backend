@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.EnterpriseWechatNoticeDao">
+
+    <!-- 企业微信通知表映射结果 -->
+    <resultMap id="enterpriseWechatNoticeMap" type="com.xiaotiyun.school.manager.model.entity.EnterpriseWechatNoticeEntity">
+        <id property="id" column="id"/>
+        <result property="schoolId" column="school_id"/>
+        <result property="noticeType" column="notice_type"/>
+        <result property="targetType" column="target_type"/>
+        <result property="filterType" column="filter_type"/>
+        <result property="filterValue" column="filter_value"/>
+        <result property="noticeContent" column="notice_content"/>
+        <result property="fileId" column="file_id"/>
+        <result property="fileType" column="file_type"/>
+        <result property="status" column="status"/>
+        <result property="sendTime" column="send_time"/>
+        <result property="creatorId" column="creator_id"/>
+        <result property="creatorName" column="creator_name"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="deleted" column="deleted"/>
+    </resultMap>
+
+    <!-- 企业微信通知表通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id,
+        school_id,
+        notice_type,
+        target_type,
+        filter_type,
+        filter_value,
+        notice_content,
+        file_id,
+        file_type,
+        status,
+        send_time,
+        creator_id,
+        creator_name,
+        create_time,
+        update_time,
+        deleted
+    </sql>
+
+</mapper>

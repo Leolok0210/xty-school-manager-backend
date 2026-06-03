@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.StudentMapper">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.StudentPageResModel">
+        SELECT stu.id                 AS id,
+               cla.sid                AS schoolYear,
+               stu.img_url            AS imgUrl,
+               stu.chinese_name       AS studentName,
+               stu.gender             AS gender,
+               stu.student_no         AS studentNo,
+               stu.seat_no            AS seatNo,
+               cla.id                 AS classId,
+               cla.class_name         AS className,
+               grade.grade_group_name AS gradeName,
+               stu.status             AS status,
+               stu.english_name       AS englishName,
+               stu.education_no       AS educationNo,
+               stu.nationality        AS nationality,
+               stu.native_place       AS nativePlace,
+               stu.id_type            AS idType,
+               stu.id_no              AS idNo,
+               stu.permanent_address  AS permanentAddress,
+               stu.mobile_phone       AS mobilePhone,
+               stu.permanent_phone    AS permanentPhone,
+               sdr.out_time           AS outTime,
+               sdr.out_reason         AS outReason,
+               sdr.escalation_situation AS escalationSituation,
+               stu.arts_science        AS artsScience,
+               cla.department        AS department,
+               stu.intention          AS intention,
+               stu.prove_img_url      AS proveImgUrl
+        FROM student_info stu
+                 LEFT JOIN sys_class cla ON cla.id = stu.class_id
+                 LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+                 LEFT JOIN student_date_record sdr ON sdr.student_id = stu.id
+        WHERE stu.deleted = 0
+        <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
+            AND stu.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null and reqModel.schoolYear != ''">
+            AND cla.sid = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.gradeId != null and reqModel.gradeId > 0">
+            AND cla.grade_group = #{reqModel.gradeId}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND cla.id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentInfo != null and reqModel.studentInfo != ''">
+            AND (stu.chinese_name LIKE CONCAT('%', #{reqModel.studentInfo}, '%') OR
+                 stu.english_name LIKE CONCAT('%', #{reqModel.studentInfo}, '%') OR
+                 stu.student_no LIKE CONCAT('%', #{reqModel.studentInfo}, '%'))
+        </if>
+        <if test="reqModel.status != null and reqModel.status > 0">
+            AND stu.status = #{reqModel.status}
+        </if>
+        <if test="reqModel.gender != null and reqModel.gender > 0">
+            AND stu.gender = #{reqModel.gender}
+        </if>
+        <if test="reqModel.idNo != null and reqModel.idNo != ''">
+            AND stu.id_no = #{reqModel.idNo}
+        </if>
+        <if test="reqModel.department != null and reqModel.department > 0">
+            AND cla.department = ${reqModel.department}
+        </if>
+        <if test="reqModel.permanentAddress != null and reqModel.permanentAddress != ''">
+            AND stu.permanent_address LIKE CONCAT('%', #{reqModel.permanentAddress}, '%')
+        </if>
+        <if test="reqModel.outYear != null and reqModel.outYear != ''">
+            AND sdr.out_time &gt;= CONCAT(#{reqModel.outYear}, '-01-01')
+            AND sdr.out_time &lt;= CONCAT(#{reqModel.outYear}, '-12-31')
+        </if>
+        <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
+            AND cla.id IN
+            <foreach item="item" collection="reqModel.classIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY stu.seat_no IS NULL,
+                 stu.seat_no ASC,
+                 stu.chinese_name ASC
+    </select>
+
+    <select id="listByClassId" resultType="com.xiaotiyun.school.manager.model.res.StudentListResModel">
+        SELECT id           AS id,
+               chinese_name AS chineseName,
+               english_name AS englishName,
+               seat_no      AS seatNo,
+               student_no   AS studentNo
+        FROM student_info
+        WHERE class_id = #{classId}
+          AND deleted = 0
+        ORDER BY seat_no
+    </select>
+</mapper>

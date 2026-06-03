@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.CompetitionRecordMapper">
+    <select id="partakeCompetitionList" resultType="java.lang.Long">
+        SELECT DISTINCT rec.competition_id
+        FROM competition_record rec
+                 LEFT JOIN competition_info com ON com.id = rec.competition_id
+        WHERE rec.deleted = 0
+          AND com.deleted = 0
+        <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
+            AND com.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null">
+            AND com.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND rec.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND rec.student_id = #{reqModel.studentId}
+        </if>
+    </select>
+
+    <select id="selectRecordPage" resultType="com.xiaotiyun.school.manager.model.res.CompetitionRecordResModel">
+        SELECT cr.*,
+               s.chinese_name         AS studentName,
+               s.student_no           AS studentNo,
+               grade.grade_group_name AS gradeName,
+               c.class_name           AS className
+        FROM competition_record cr
+                 LEFT JOIN student_info s ON cr.student_id = s.id
+                 LEFT JOIN sys_class c ON cr.class_id = c.id
+                 LEFT JOIN grade_group grade ON grade.id = c.grade_group
+        <where>
+            cr.deleted = 0
+            <if test="reqModel.competitionId != null">
+                AND cr.competition_id = #{reqModel.competitionId}
+            </if>
+            <if test="reqModel.studentName != null and reqModel.studentName != ''">
+                AND s.chinese_name LIKE CONCAT('%', #{reqModel.studentName}, '%')
+            </if>
+            <if test="reqModel.className != null and reqModel.className != ''">
+                AND c.class_name LIKE CONCAT('%', #{reqModel.className}, '%')
+            </if>
+        </where>
+        ORDER BY cr.id DESC
+    </select>
+
+    <select id="selectStudentRecordPage"
+            resultType="com.xiaotiyun.school.manager.model.res.CompetitionStudentPageResModel">
+        SELECT cr.id                  AS id,
+               ci.school_id           AS schoolId,
+               ci.competition_name    AS competitionName,
+               ci.start_date          AS startDate,
+               ci.end_date            AS endDate,
+               ci.organizer           AS organizer,
+               ci.location            AS location,
+               ci.school_year         AS schoolYear,
+               cr.award               AS award,
+               cr.merit_big           AS meritBig,
+               cr.merit_small         AS meritSmall,
+               cr.merit_advantage     AS meritAdvantage,
+               cr.demerit_big         AS demeritBig,
+               cr.demerit_small       AS demeritSmall,
+               cr.demerit_shortcoming AS demeritShortcoming
+        FROM competition_record cr
+                 LEFT JOIN competition_info ci ON cr.competition_id = ci.id
+                 LEFT JOIN student_info s ON cr.student_id = s.id
+        <where>
+            cr.deleted = 0
+            <if test="reqModel.studentId != null and reqModel.studentId > 0">
+                AND cr.student_id = #{reqModel.studentId}
+            </if>
+        </where>
+        ORDER BY cr.id DESC
+    </select>
+    <select id="getCountStudent"
+            resultType="com.xiaotiyun.school.manager.model.dto.CompetitionStudentCountDTO">
+        select cr.student_id as studentId,
+               sum(cr.merit_big) as meritBig,
+               sum(cr.merit_small) as meritSmall,
+               sum(cr.merit_advantage) as meritAdvantage,
+               sum(cr.demerit_big) as demeritBig,
+               sum(cr.demerit_small) as demeritSmall,
+               sum(cr.demerit_shortcoming) as demeritShortcoming
+        from competition_record cr left join  competition_info ci on cr.competition_id = ci.id
+        where cr.deleted = 0
+          and cr.class_id = #{classId}
+          and ci.start_date between #{semesterStart} and #{semesterEnd}
+        group by cr.student_id
+    </select>
+</mapper>

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.ActivityStudentReportDao">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.xiaotiyun.school.manager.model.entity.ActivityStudentReportEntity">
+        <id column="id" property="id"/>
+        <result column="activity_id" property="activityId"/>
+        <result column="lenson_id" property="lensonId"/>
+        <result column="student_id" property="studentId"/>
+        <result column="type" property="type"/>
+        <result column="volunteer_type" property="volunteerType"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, activity_id, lenson_id, student_id, type, volunteer_type, status, create_time, update_time, deleted
+    </sql>
+
+    <!-- 查询学生无选课情况列表 -->
+    <select id="selectStudentCourseList" resultType="com.xiaotiyun.school.manager.model.res.ActivityStudentReportQueryResModel">
+        SELECT 
+            si.chinese_name AS studentName,
+            si.id AS studentId,
+            sc.class_name AS className,
+            gg.grade_group_name AS gradeGroupName,
+            si.student_no AS studentNo
+        FROM 
+            sys_class sc
+            INNER JOIN student_info si ON sc.id = si.class_id
+            LEFT JOIN grade_group gg ON sc.grade_group = gg.id
+            LEFT JOIN activity_student_report asr ON (si.id = asr.student_id AND asr.deleted = 0 AND asr.activity_id = #{req.activityId})
+        WHERE 
+            sc.deleted = 0
+            AND si.deleted = 0
+            AND sc.school_id = #{req.schoolId}
+            AND sc.sid = #{req.schoolYear}
+            AND sc.department = #{req.department}
+
+            <if test="req.classId != null and req.classId > 0">
+                AND sc.id = #{req.classId}
+            </if>
+            <if test="req.studentName != null and req.studentName != ''">
+                AND si.chinese_name LIKE CONCAT('%', #{req.studentName}, '%')
+            </if>
+            <if test="req.studentNo != null and req.studentNo != ''">
+                AND si.student_no LIKE CONCAT('%', #{req.studentNo}, '%')
+            </if>
+            <if test="req.classIds != null and req.classIds.size() > 0">
+                AND si.class_id IN
+                <foreach item="item" collection="req.classIds" separator="," close=")" open="(" index="">
+                    #{item}
+                </foreach>
+            </if>
+        GROUP BY
+            studentId
+        HAVING 
+            COUNT(asr.id) = 0
+        ORDER BY 
+            sc.class_name
+    </select>
+
+    <!-- 查询活动总人数 -->
+    <select id="selectActivityTotalStudentCount" resultType="java.lang.Integer">
+        SELECT 
+            COUNT(DISTINCT si.id) AS totalCount
+        FROM 
+            sys_class sc
+            LEFT JOIN student_info si ON sc.id = si.class_id
+        WHERE 
+            sc.deleted = 0
+            AND si.deleted = 0
+            AND sc.upgrade = 0
+            AND sc.school_id = #{schoolId}
+            AND sc.sid = #{schoolYear}
+            AND sc.department = #{department}
+    </select>
+
+    <!-- 查询课程总人数 -->
+    <select id="selectCourseTotalStudentCount" resultType="java.lang.Integer">
+        SELECT 
+            COUNT(*) AS totalCount
+        FROM 
+            activity_student_report asr
+        WHERE 
+            asr.deleted = 0
+            AND asr.activity_id = #{activityId}
+    </select>
+
+    <!-- 查询活动匹配列表 -->
+    <select id="selectActivityStudentReportList" resultType="com.xiaotiyun.school.manager.model.res.ActivityStudentReportListResModel">
+        SELECT 
+            asr.id,
+            si.chinese_name AS studentName,
+            sc.class_name AS className,
+            gg.grade_group_name AS gradeGroupName,
+            si.student_no AS studentNo,
+            asr.volunteer_type AS volunteerType,
+            asr.status,
+            si.id AS studentId,
+            asr.type
+        FROM 
+            sys_class sc
+            left JOIN student_info si ON sc.id = si.class_id
+            left JOIN grade_group gg ON sc.grade_group = gg.id
+            left JOIN activity_student_report asr ON si.id = asr.student_id AND asr.activity_id = #{req.activityId}
+        WHERE 
+            sc.deleted = 0
+            AND si.deleted = 0
+            AND asr.deleted = 0
+            AND sc.school_id = #{req.schoolId}
+            AND sc.sid = #{req.schoolYear}
+            AND sc.department = #{req.department}
+            AND asr.lenson_id = #{req.lensonId}
+            <if test="req.classId != null and req.classId > 0">
+                AND sc.id = #{req.classId}
+            </if>
+            <if test="req.studentName != null and req.studentName != ''">
+                AND si.chinese_name LIKE CONCAT('%', #{req.studentName}, '%')
+            </if>
+            <if test="req.studentNo != null and req.studentNo != ''">
+                AND si.student_no LIKE CONCAT('%', #{req.studentNo}, '%')
+            </if>
+            <if test="req.selectType != null and req.selectType != -1">
+                AND asr.type = #{req.selectType}
+            </if>
+            <if test="req.status != null and req.status != -1">
+                AND asr.status = #{req.status}
+            </if>
+        ORDER BY 
+            sc.class_name
+    </select>
+
+    <!-- 查询活动匹配导出数据 -->
+    <select id="selectActivityStudentReportExportData" resultType="com.xiaotiyun.school.manager.model.dto.ActivityStudentReportExportDTO">
+        SELECT 
+            lac.name AS courseName,
+            si.chinese_name AS studentName,
+            CONCAT(IFNULL(gg.grade_group_name, ''), IFNULL(sc.class_name, '')) AS className,
+            si.student_no AS studentNo
+        FROM 
+            activity_student_report asr
+            INNER JOIN student_info si ON asr.student_id = si.id
+            INNER JOIN sys_class sc ON si.class_id = sc.id
+            LEFT JOIN grade_group gg ON sc.grade_group = gg.id
+            INNER JOIN leisure_activity_courses_record lac ON asr.lenson_id = lac.id
+        WHERE 
+            asr.deleted = 0
+            AND si.deleted = 0
+            AND sc.deleted = 0
+            AND lac.deleted = 0
+            AND asr.activity_id = #{activityId}
+        ORDER BY 
+            asr.lenson_id
+    </select>
+
+</mapper> 

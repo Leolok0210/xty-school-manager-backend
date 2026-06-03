@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.StudentUsuallyScoreMapper">
+    <select id="scoreList" resultType="com.xiaotiyun.school.manager.model.dto.StudentUsuallyScoreDTO">
+        SELECT score.id              AS id,
+               stu.id                AS studentId,
+               stu.seat_no           AS seatNo,
+               stu.chinese_name      AS chineseName,
+               stu.english_name      AS englishName,
+               stu.display_name_type AS displayNameType,
+               stu.student_no        AS studentNo,
+               score.score           AS score,
+               susr.username         AS updateUser,
+               score.create_time     AS createTime
+        FROM student_usually_score score
+                 LEFT JOIN student_info stu ON stu.id = score.student_id
+                 LEFT JOIN student_usually_task exam ON exam.id = score.task_id
+                 LEFT JOIN sys_user_school_rel susr ON susr.school_id = exam.school_id AND susr.user_id = score.update_id AND susr.deleted = 0
+        WHERE score.deleted = 0
+          AND score.task_id = #{taskId}
+        ORDER BY stu.seat_no IS NULL,
+                 stu.seat_no ASC,
+                 stu.chinese_name ASC
+    </select>
+
+    <select id="partakeCountList" resultType="com.xiaotiyun.school.manager.model.dto.StudentUsuallyPartakeCountDTO">
+        SELECT task_id           AS taskId,
+               COUNT(student_id) AS partakeCount
+        FROM student_usually_score
+        WHERE deleted = 0
+          AND task_id IN
+        <foreach collection="taskIds" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        GROUP BY task_id
+    </select>
+
+    <select id="partakeTaskList" resultType="java.lang.Long">
+        SELECT DISTINCT score.task_id
+        FROM student_usually_score score
+                 LEFT JOIN student_info stu ON stu.id = score.student_id
+        WHERE score.deleted = 0
+          AND (stu.chinese_name LIKE CONCAT('%', #{studentInfo}, '%') OR
+               stu.english_name LIKE CONCAT('%', #{studentInfo}, '%') OR
+               stu.student_no LIKE CONCAT('%', #{studentInfo}, '%'))
+    </select>
+
+    <select id="scoreDetailList" resultType="com.xiaotiyun.school.manager.model.dto.StudentUsuallyScoreDetailDTO">
+        SELECT score.id              AS id,
+               stu.id                AS studentId,
+               stu.seat_no           AS seatNo,
+               stu.chinese_name      AS chineseName,
+               stu.english_name      AS englishName,
+               stu.display_name_type AS displayNameType,
+               stu.student_no        AS studentNo,
+               task.subject_id       AS subjectId,
+               subject.subject_name  AS subjectName,
+               task.id               AS taskId,
+               task.name             AS taskName,
+               task.test_date        AS testDate,
+               stu.student_no        AS studentNo,
+               sem.name              AS periodName,
+               score.score           AS score,
+               task.type_id             AS typeId
+        FROM student_usually_score score
+                 LEFT JOIN student_usually_task task ON task.id = score.task_id
+                 LEFT JOIN subject_rel srl ON srl.id = task.subject_id
+        LEFT JOIN subject subject ON subject.id = srl.subject_id
+                 LEFT JOIN sys_semester sem ON sem.id = task.period_id
+                 LEFT JOIN student_info stu ON stu.id = score.student_id
+        WHERE score.deleted = 0
+          AND task.deleted = 0
+        <if test="studentId != null">
+            AND score.student_id = #{studentId}
+        </if>
+        AND score.task_id IN
+        <foreach collection="taskIds" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="getStudentPeriodScores" resultType="com.xiaotiyun.school.manager.model.res.StudentPeriodScoreResponseModel">
+        SELECT 
+            score.student_id AS studentId,
+            task.period_id AS periodId,
+            task.subject_id AS subjectId,
+            score.score AS score,
+            task.type_id AS typeId
+        FROM student_usually_score score
+        LEFT JOIN student_usually_task task ON task.id = score.task_id
+        WHERE
+        task.class_id = #{classId}
+          <if test="periodId != null and periodId > 0">
+            AND task.period_id = #{periodId}
+          </if>
+            AND score.deleted = 0
+            AND task.deleted = 0
+        ORDER BY 
+            score.student_id ASC
+    </select>
+
+    <select id="getScoreListByStudent" resultType="com.xiaotiyun.school.manager.model.res.StudentUsuallyScoreResModel">
+        SELECT
+            score.id AS id,
+            score.student_id AS studentId,
+            task.test_date AS testTime,
+            task.subject_id AS subjectId,
+            s.subject_name AS subjectName,
+            sr.subject_type AS subjectType,
+            score.score AS score,
+            task.type_id AS testType,
+            ty.type_name AS testTypeName
+        FROM student_usually_score score
+             LEFT JOIN student_usually_task task ON task.id = score.task_id AND task.deleted = 0
+             LEFT JOIN subject_rel sr ON sr.id = task.subject_id AND sr.deleted = 0
+             LEFT JOIN `subject` s ON s.id = sr.subject_id AND s.deleted = 0
+             LEFT JOIN `student_usually_type` ty on ty.id = task.type_id
+        WHERE score.deleted = 0
+          AND score.student_id = ${reqModel.studentId}
+          <if test="reqModel.semesterId != null and reqModel.semesterId > 0">
+              AND task.period_id = ${reqModel.semesterId}
+          </if>
+          <if test="reqModel.startTime != null and reqModel.startTime != ''">
+              AND task.test_date &gt;= #{reqModel.startTime}
+          </if>
+          <if test="reqModel.endTime != null and reqModel.endTime != ''">
+              AND task.test_date &lt;= #{reqModel.endTime}
+          </if>
+          <if test="reqModel.subjectId != null and reqModel.subjectId > 0">
+              AND sr.id = ${reqModel.subjectId}
+          </if>
+          <if test="reqModel.subjectType != null and reqModel.subjectType > 0">
+              AND sr.subject_type = ${reqModel.subjectType}
+          </if>
+          <if test="reqModel.testType != null and reqModel.testType > 0 ">
+              AND task.type_id = ${reqModel.testType}
+          </if>
+        ORDER BY task.test_date DESC
+    </select>
+</mapper>

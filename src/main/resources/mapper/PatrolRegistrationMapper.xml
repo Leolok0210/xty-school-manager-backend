@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xiaotiyun.school.manager.dao.PatrolRegistrationDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.PatrolRegistrationResModel">
+        SELECT  pr.id                     AS id,
+                pr.school_year            AS schoolYear,
+                ss.id                     AS semesterId,
+                ss.name                   AS semesterName,
+                grade.id                  AS classGroupId,
+                grade.grade_group_name    AS classGroupName,
+                cla.id                    AS classId,
+                cla.class_name            AS className,
+                stu.seat_no               AS studentClassNumber,
+                stu.id                    AS studentId,
+                stu.chinese_name          AS studentName,
+                pr.registration_date      AS registrationDate,
+                pr.lesson_period_id       AS lessonPeriodId,
+#                 l.name                    AS lessonPeriod,
+                pr.registration_id        AS registrationId,
+                pr.registration_content   AS registrationContent,
+                pr.registrant             AS registrant
+        FROM patrol_registration pr
+        LEFT JOIN student_info stu ON stu.id = pr.student_id
+        LEFT JOIN sys_class cla ON cla.id = stu.class_id
+        LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+        LEFT JOIN sys_semester ss on pr.semester_id = ss.id
+#         LEFT JOIN lesson l on pr.lesson_period_id = l.id
+        WHERE pr.deleted = 0
+        <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
+            AND pr.school_id = ${reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null and reqModel.schoolYear != ''">
+            AND pr.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.semesterId != null and reqModel.semesterId > 0">
+            AND pr.semester_id = ${reqModel.semesterId}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND pr.class_id = ${reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND pr.student_id = ${reqModel.studentId}
+        </if>
+        <if test="reqModel.startDate != null and reqModel.startDate != ''">
+            AND pr.registration_date &gt;= #{reqModel.startDate}
+        </if>
+        <if test="reqModel.endDate != null and reqModel.endDate != ''">
+            AND pr.registration_date &lt;= #{reqModel.endDate}
+        </if>
+        <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
+            AND pr.class_id IN
+            <foreach item="item" index="index" collection="reqModel.classIds"
+                     open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY pr.create_time desc
+    </select>
+</mapper>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.StudentAttendanceDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.StudentAttendancePageResModel">
+        SELECT att.id                 AS id,
+               stu.chinese_name       AS studentName,
+               stu.student_no         AS studentNo,
+               grade.grade_group_name AS gradeName,
+               cla.class_name         AS className,
+               att.attendance_date    AS attendanceDate,
+               att.morning_in_time    AS morningInTime,
+               att.morning_out_time   AS morningOutTime,
+               att.afternoon_in_time  AS afternoonInTime,
+               att.afternoon_out_time AS afternoonOutTime,
+               att.status             AS status,
+               att.remark             AS remark
+        FROM student_attendance att
+                 LEFT JOIN student_info stu ON stu.id = att.student_id
+                 LEFT JOIN sys_class cla ON cla.id = att.class_id
+                 LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+        WHERE att.deleted = 0
+        <if test="reqModel.schoolId != null">
+            AND att.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null and reqModel.schoolYear != ''">
+            AND att.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND att.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND att.student_id = #{reqModel.studentId}
+        </if>
+        <if test="reqModel.queryStartDate != null">
+            AND att.attendance_date &gt;= #{reqModel.queryStartDate}
+        </if>
+        <if test="reqModel.queryEndDate != null">
+            AND att.attendance_date &lt;= #{reqModel.queryEndDate}
+        </if>
+        <if test="reqModel.status != null and reqModel.status >= 0">
+            AND FIND_IN_SET(#{reqModel.status}, att.status)
+        </if>
+        <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
+            AND att.class_id IN
+            <foreach collection="reqModel.classIds" item="classId" open="(" separator="," close=")">
+                #{classId}
+            </foreach>
+        </if>
+        ORDER BY att.attendance_date DESC
+    </select>
+
+    <select id="selectStudentAttendanceCount"
+            resultType="com.xiaotiyun.school.manager.model.res.StudentLateCountResModel">
+        SELECT student_id as studentId,
+               COUNT(*)   as lateCount
+        FROM student_attendance
+        WHERE deleted = 0
+        <if test="studentId != null and studentId > 0">
+            AND student_id = #{studentId}
+        </if>
+        <if test="status != null and status >= 0">
+            AND FIND_IN_SET(#{status}, status)
+        </if>
+        <if test="startDate != null">
+            AND attendance_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND attendance_date &lt;= #{endDate}
+        </if>
+    </select>
+
+    <select id="selectStudentLateCount" resultType="com.xiaotiyun.school.manager.model.res.StudentLateCountResModel">
+        SELECT student_id as studentId,
+               COUNT(*)   as lateCount
+        FROM student_attendance
+        WHERE school_id = #{schoolId}
+          AND deleted = 0
+          AND FIND_IN_SET(1, status)
+        <if test="classId != null">
+            AND class_id = #{classId}
+        </if>
+        <if test="studentIds != null and studentIds.size() > 0">
+            AND student_id IN
+            <foreach collection="studentIds" item="studentId" open="(" separator="," close=")">
+                #{studentId}
+            </foreach>
+        </if>
+        GROUP BY student_id
+    </select>
+
+
+    <select id="countLateDays" resultType="com.xiaotiyun.school.manager.model.dto.StudentLateRecordDTO">
+        SELECT student_id AS studentId, COUNT(*) AS lateCount
+        FROM student_attendance
+        WHERE class_id = #{classId}
+            <if test="startDate != null">
+                AND attendance_date &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND attendance_date &lt;= #{endDate}
+            </if>
+        AND FIND_IN_SET(1, status)
+          AND deleted = 0
+        GROUP BY student_id
+    </select>
+    <select id="getLateDays" resultType="com.xiaotiyun.school.manager.model.entity.StudentAttendanceEntity">
+        SELECT *
+        FROM student_attendance
+        WHERE class_id = #{classId}
+        <if test="startDate != null">
+            AND attendance_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND attendance_date &lt;= #{endDate}
+        </if>
+        AND FIND_IN_SET(1, status)
+        AND deleted = 0
+    </select>
+</mapper>

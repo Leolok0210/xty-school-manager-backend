@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.StudentGraduateEnrollMapper">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.StudentGraduateEnrollPageResModel">
+        SELECT enroll.id              AS id,
+               grade.grade_group_name AS gradeName,
+               cla.class_name         AS className,
+               stu.seat_no            AS seatNo,
+               stu.chinese_name       AS studentName,
+               stu.student_no         AS studentNo,
+               enroll.type            AS type,
+               enroll.graduate_type   AS graduateType,
+               enroll.job             AS job,
+               enroll.school_address  AS schoolAddress,
+               enroll.faculty         AS faculty,
+               enroll.department      AS department
+        FROM student_graduate_enroll enroll
+                 LEFT JOIN sys_class cla ON cla.id = enroll.class_id
+                 LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+                 LEFT JOIN student_info stu ON stu.id = enroll.student_id
+        WHERE enroll.deleted = 0
+        <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
+            AND stu.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null">
+            AND cla.sid = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND cla.id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentInfo != null">
+            AND (stu.chinese_name LIKE CONCAT('%', #{reqModel.studentInfo}, '%') OR
+                 stu.english_name LIKE CONCAT('%', #{reqModel.studentInfo}, '%') OR
+                 stu.student_no LIKE CONCAT('%', #{reqModel.studentInfo}, '%'))
+        </if>
+        <if test="reqModel.type != null and reqModel.type > 0">
+            AND enroll.type = #{reqModel.type}
+        </if>
+        <if test="reqModel.graduateType != null and reqModel.graduateType > 0">
+            AND enroll.graduate_type = #{reqModel.graduateType}
+        </if>
+        <if test="reqModel.schoolAddress != null">
+            AND enroll.school_address = #{reqModel.schoolAddress}
+        </if>
+        <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
+            AND cla.id IN
+            <foreach item="item" collection="reqModel.classIds" index="index" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+        order by enroll.create_time DESC
+    </select>
+</mapper>

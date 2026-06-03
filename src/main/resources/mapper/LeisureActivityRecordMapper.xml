@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xiaotiyun.school.manager.dao.LeisureActivityRecordDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.LeisureActivityRecordResModel">
+        SELECT
+            lar.id,
+            lar.school_id AS schoolId,
+            lar.school_year AS schoolYear,
+            lar.department,
+            lar.semester_id AS semesterId,
+            s.name AS semesterName,
+            lar.name,
+            lar.volunteer_num AS volunteerNum,
+            lar.start_time AS startTime,
+            lar.end_time AS endTime,
+            lar.second_end_time AS secondEndTime,
+            lar.remark,
+            lar.status,
+            lar.publish_status AS publishStatus,
+            lacr.courseNum,
+            lar.open_wechat_notice AS openWechatNotice,
+            lar.start_notice_time AS startNoticeTime,
+            lar.end_notice_time AS endNoticeTime
+        FROM leisure_activity_record lar
+        LEFT JOIN sys_semester s ON lar.semester_id = s.id
+        LEFT JOIN
+            (SELECT activity_id,COUNT(1) AS courseNum FROM leisure_activity_courses_record WHERE deleted = 0 GROUP BY activity_id)
+                lacr ON lacr.activity_id = lar.id
+        WHERE lar.deleted = 0
+        AND lar.school_id = ${schoolId}
+        AND lar.school_year = #{schoolYear}
+        <if test="department != null and department > 0">
+            AND lar.department = ${department}
+        </if>
+        <if test="semesterId != null and semesterId > 0">
+            AND lar.semester_id = ${semesterId}
+        </if>
+        <if test="name != null and name != ''">
+            AND lar.name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        ORDER BY lar.create_time DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.UserDao">
+<select id="selectTeachersBySchool" resultType="com.xiaotiyun.school.manager.model.res.TeacherListResModel">
+    SELECT 
+        us.id AS userId,
+        us.username AS userName,
+        u.mobile AS mobile
+    FROM
+        sys_user u
+    JOIN
+        sys_user_school_rel us ON u.id = us.user_id
+    LEFT JOIN (SELECT user_id,'0' AS deleted FROM sys_user_dept_rel
+            WHERE deleted = 0 AND school_id = #{schoolId} GROUP BY user_id) udr ON us.id = udr.user_id
+    WHERE
+        us.school_id = #{schoolId}
+        AND u.deleted = 0
+        AND us.deleted = 0 and us.user_type =1
+        AND udr.deleted = 0
+</select>
+
+    <select id="queryTeacherList" resultType="com.xiaotiyun.school.manager.model.res.UserDetailResModel">
+        SELECT
+            u.id AS id,
+            u.login_name AS loginName,
+            u.gender AS gender,
+            us.username AS username,
+            u.mobile_head AS mobileHead,
+            u.mobile AS mobile,
+            us.user_number AS userNumber,
+            us.user_group_ids AS userGroupIds,
+            udr.is_admin AS isDeptLeader,
+            udr.is_master AS isMasterDept,
+            d.id AS deptId,
+            d.`name` AS deptName
+        FROM
+            ( SELECT user_id, dept_id, is_admin, is_master FROM sys_user_dept_rel WHERE school_id = ${schoolId} AND deleted = 0
+                <if test="reqModel.deptId != null and reqModel.deptId > 0">
+                    AND dept_id = ${reqModel.deptId}
+                </if>
+                <if test="reqModel.deptId == null or reqModel.deptId == 0">
+                    AND is_master = 1
+                </if>
+            ) udr
+            LEFT JOIN ( SELECT username, user_id, user_number, id, user_group_ids,create_time FROM sys_user_school_rel WHERE school_id = ${schoolId} AND deleted = 0 ) us ON udr.user_id = us.id
+            LEFT JOIN sys_user u ON us.user_id = u.id
+            LEFT JOIN ( SELECT `name`, id FROM sys_dept WHERE school_id = ${schoolId} AND deleted = 0 ) d ON d.id = udr.dept_id
+        WHERE
+            u.deleted = 0
+          <if test="reqModel.searchText != null and reqModel.searchText != '' ">
+              AND (
+              us.username LIKE CONCAT('%', #{reqModel.searchText}, '%')
+              OR us.user_number LIKE CONCAT('%', #{reqModel.searchText}, '%')
+              OR u.mobile LIKE CONCAT('%', #{reqModel.searchText}, '%')
+              OR u.login_name LIKE CONCAT('%', #{reqModel.searchText}, '%')
+              )
+          </if>
+          <if test="reqModel.groupId != null and reqModel.groupId > 0">
+              AND us.user_group_ids LIKE CONCAT('%', #{reqModel.groupId}, '%')
+          </if>
+          <if test="reqModel.gender != null and reqModel.gender > 0">
+              AND u.gender = ${reqModel.gender}
+          </if>
+        ORDER BY us.create_time DESC
+    </select>
+</mapper>
+<!-- ... existing code ... -->

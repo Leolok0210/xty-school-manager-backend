@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.UserRewardDao">
+    <select id="getUserReward" resultType="com.xiaotiyun.school.manager.model.res.UserRewardDetailResModel">
+        select su.chinese_name as studentName,su.seat_no as seatNo, su.class_id as classId, sc.class_name as className,
+        sc.class_serial_number as classNumber,ur.*
+        from user_reward ur
+        LEFT JOIN sys_semester sem ON sem.id = ur.term
+        left join student_info su on ur.student_id = su.id
+        left join sys_class sc on su.class_id = sc.id
+        where ur.deleted = 0 and ur.school_id = #{schoolId}
+        <if test="sid != null">
+            and ur.sid = #{sid}
+        </if>
+        <if test="term != null">
+            and ur.term = #{term}
+        </if>
+        <if test="department != null and department > 0">
+            AND sem.department = #{department}
+        </if>
+        <if test="studentName != null">
+            and su.chinese_name like CONCAT('%', #{studentName}, '%')
+        </if>
+        <if test="type != null">
+            and ur.type = #{type}
+        </if>
+        <if test="classId != null and classId > 0">
+            and su.class_id = #{classId}
+        </if>
+        <if test="studentId != null">
+            and ur.student_id = #{studentId}
+        </if>
+        <if test="isAuto != null">
+            and ur.is_auto = #{isAuto}
+        </if>
+        <if test="autoType != null">
+            and ur.auto_type = #{autoType}
+        </if>
+        <if test="classIds != null and classIds.size() > 0">
+            su.class_id in
+            <foreach item="classId" index="index" collection="classIds" open="(" separator="," close=")">
+                #{classId}
+            </foreach>
+        </if>
+        order by ur.date desc
+    </select>
+
+    <select id="getUserRewardCount" resultType="com.xiaotiyun.school.manager.model.res.UserRewardCountResModel">
+        SELECT
+        ur.student_id AS studentId,
+        SUM(ur.min_reward ) AS minRewardCount,
+        SUM(ur.mid_reward) AS midRewardCount,
+        SUM(ur.max_reward) AS maxRewardCount
+        FROM
+        user_reward ur
+        WHERE
+        ur.type = #{type}
+        <if test="sid != null">
+            AND ur.sid = #{sid}
+        </if>
+        AND ur.school_id = #{schoolId}
+        AND ur.student_id IN
+        <foreach item="studentId" index="index" collection="studentIds" open="(" separator="," close=")">
+            #{studentId}
+        </foreach>
+        <if test="termId != null">
+            AND ur.term = #{termId}
+        </if>
+        AND (
+            ur.is_auto = 1
+            OR (
+                ur.is_auto != 1
+                AND EXISTS (
+                    SELECT 1
+                    FROM act_approval_instance ai
+                    WHERE ai.business_id = ur.id AND ai.process_type = 3 AND ai.status = 2
+                    )
+            )
+        )
+        GROUP BY ur.student_id
+    </select>
+
+    <select id="pending" resultType="com.xiaotiyun.school.manager.model.res.UserRewardPendingPageResModel">
+        SELECT
+        ur.id AS id,
+        task.id AS taskId,
+        ss.name AS termName,
+        ur.meeting_date AS meetingDate,
+        gg.grade_group_name AS groupName,
+        cla.class_name AS className,
+        stu.chinese_name AS studentName,
+        ur.reward_reason AS rewardReason,
+        ai.`status` AS status,
+        ai.start_time AS startTime,
+        ai.start_user_name AS startUserName
+        FROM
+        act_approval_task task
+        INNER JOIN act_approval_instance ai ON task.instance_id = ai.id AND ai.process_type = 3
+        INNER JOIN user_reward ur ON ur.id = ai.business_id
+        left join student_info stu on ur.student_id = stu.id
+        left join sys_class cla on cla.id = stu.class_id
+        left join grade_group gg on cla.grade_group = gg.id
+        left join sys_semester ss on ur.term = ss.id
+        WHERE task.deleted = 0 AND task.`status` = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND ur.school_id = #{schoolId}
+        </if>
+        <if test="userId != null and userId > 0">
+            AND JSON_CONTAINS(task.approver_ids, <![CDATA['${userId}']]>, '$')
+        </if>
+        <if test="reqModel.sid != null and reqModel.sid != ''">
+            AND ur.sid = #{reqModel.sid}
+        </if>
+        <if test="reqModel.term != null and reqModel.term > 0">
+            AND ur.term = #{reqModel.term}
+        </if>
+        <if test="reqModel.type != null and reqModel.type > 0">
+            AND ur.type = #{reqModel.type}
+        </if>
+        <if test="reqModel.department != null and reqModel.department > 0">
+            AND cla.department = #{reqModel.department}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND stu.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentInfo != null and reqModel.studentInfo != ''">
+            AND (stu.chinese_name LIKE CONCAT('%', #{reqModel.studentInfo}, '%') OR
+            stu.student_no LIKE CONCAT('%', #{reqModel.studentInfo}, '%'))
+        </if>
+        <if test="reqModel.rewardReason != null and reqModel.rewardReason != ''">
+            AND ur.reward_reason LIKE CONCAT('%', #{reqModel.rewardReason}, '%')
+        </if>
+        <if test="reqModel.startDate != null">
+            AND ur.meeting_date &gt;= #{reqModel.startDate}
+        </if>
+        <if test="reqModel.endDate != null">
+            AND ur.meeting_date &lt;= #{reqModel.endDate}
+        </if>
+        ORDER BY
+        ur.id DESC
+    </select>
+
+    <select id="approved" resultType="com.xiaotiyun.school.manager.model.res.UserRewardPendingPageResModel">
+        SELECT
+        ur.id AS id,
+        ai.id AS instanceId,
+        ss.name AS termName,
+        ur.meeting_date AS meetingDate,
+        gg.grade_group_name AS groupName,
+        cla.class_name AS className,
+        stu.chinese_name AS studentName,
+        ur.reward_reason AS rewardReason,
+        ai.`status` AS status,
+        ai.start_time AS startTime,
+        ai.start_user_name AS startUserName
+        FROM
+        act_approval_instance ai
+        INNER JOIN user_reward ur ON ur.id = ai.business_id
+        left join student_info stu on ur.student_id = stu.id
+        left join sys_class cla on cla.id = stu.class_id
+        left join grade_group gg on cla.grade_group = gg.id
+        left join sys_semester ss on ur.term = ss.id
+        <if test="userId != null and userId > 0">
+            INNER JOIN (SELECT DISTINCT instance_id
+            FROM act_approval_history
+            WHERE operate_user_id = #{userId}
+            ) aah ON ai.id = aah.instance_id
+        </if>
+        WHERE
+        ai.deleted = 0 AND ai.process_type = 3
+        <if test="schoolId != null and schoolId > 0">
+            AND ur.school_id = #{schoolId}
+        </if>
+        <if test="reqModel.sid != null and reqModel.sid != ''">
+            AND ur.sid = #{reqModel.sid}
+        </if>
+        <if test="reqModel.term != null and reqModel.term > 0">
+            AND ur.term = #{reqModel.term}
+        </if>
+        <if test="reqModel.type != null and reqModel.type > 0">
+            AND ur.type = #{reqModel.type}
+        </if>
+        <if test="reqModel.department != null and reqModel.department > 0">
+            AND cla.department = #{reqModel.department}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND stu.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentInfo != null and reqModel.studentInfo != ''">
+            AND (stu.chinese_name LIKE CONCAT('%', #{reqModel.studentInfo}, '%') OR
+            stu.student_no LIKE CONCAT('%', #{reqModel.studentInfo}, '%'))
+        </if>
+        <if test="reqModel.rewardReason != null and reqModel.rewardReason != ''">
+            AND ur.reward_reason LIKE CONCAT('%', #{reqModel.rewardReason}, '%')
+        </if>
+        <if test="reqModel.startDate != null">
+            AND ur.meeting_date &gt;= #{reqModel.startDate}
+        </if>
+        <if test="reqModel.endDate != null">
+            AND ur.meeting_date &lt;= #{reqModel.endDate}
+        </if>
+        ORDER BY
+        ur.id DESC
+    </select>
+
+    <select id="allList" resultType="com.xiaotiyun.school.manager.model.res.UserRewardAllListPageResModel">
+        SELECT
+        ur.id AS id,
+        ai.id AS instanceId,
+        ss.name AS termName,
+        ur.meeting_date AS meetingDate,
+        gg.grade_group_name AS groupName,
+        cla.class_name AS className,
+        stu.chinese_name AS studentName,
+        ur.reward_reason AS rewardReason,
+        ai.`status` AS status,
+        ai.start_time AS startTime,
+        ai.start_user_id AS startUserId,
+        ai.start_user_name AS startUserName
+        FROM
+        act_approval_instance ai
+        INNER JOIN user_reward ur ON ur.id = ai.business_id
+        left join student_info stu on ur.student_id = stu.id
+        left join sys_class cla on cla.id = stu.class_id
+        left join grade_group gg on cla.grade_group = gg.id
+        left join sys_semester ss on ur.term = ss.id
+        WHERE
+        ai.deleted = 0 AND ai.process_type = 3
+        <if test="schoolId != null and schoolId > 0">
+            AND ur.school_id = #{schoolId}
+        </if>
+        <if test="classIds != null and classIds.size() > 0">
+            AND cla.id IN
+            <foreach item="item" collection="classIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        <if test="reqModel.sid != null and reqModel.sid != ''">
+            AND ur.sid = #{reqModel.sid}
+        </if>
+        <if test="reqModel.term != null and reqModel.term > 0">
+            AND ur.term = #{reqModel.term}
+        </if>
+        <if test="reqModel.type != null and reqModel.type > 0">
+            AND ur.type = #{reqModel.type}
+        </if>
+        <if test="reqModel.department != null and reqModel.department > 0">
+            AND cla.department = #{reqModel.department}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND stu.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.status != null and reqModel.status > 0">
+            AND ai.`status` = #{reqModel.status}
+        </if>
+        <if test="reqModel.studentInfo != null and reqModel.studentInfo != ''">
+            AND (stu.chinese_name LIKE CONCAT('%', #{reqModel.studentInfo}, '%') OR
+            stu.student_no LIKE CONCAT('%', #{reqModel.studentInfo}, '%'))
+        </if>
+        <if test="reqModel.rewardReason != null and reqModel.rewardReason != ''">
+            AND ur.reward_reason LIKE CONCAT('%', #{reqModel.rewardReason}, '%')
+        </if>
+        <if test="reqModel.startDate != null">
+            AND ur.meeting_date &gt;= #{reqModel.startDate}
+        </if>
+        <if test="reqModel.endDate != null">
+            AND ur.meeting_date &lt;= #{reqModel.endDate}
+        </if>
+        ORDER BY
+        ur.id DESC
+    </select>
+    <select id="getUserRewardByActApproval" resultType="com.xiaotiyun.school.manager.model.entity.UserReward">
+        SELECT
+        ur.*
+        FROM
+        act_approval_instance ai
+        INNER JOIN user_reward ur ON ur.id = ai.business_id
+        WHERE
+        ai.deleted = 0 AND ai.process_type = 3 and ai.`status` = 2 and ur.deleted = 0 and ur.type = 2 and ur.is_auto = 0
+        <if test="studentIds != null and studentIds.size() > 0">
+            AND ur.student_id IN
+            <foreach item="item" collection="studentIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        <if test="terms != null and terms.size() > 0">
+            AND ur.term IN
+            <foreach item="item" collection="terms" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        and ur.school_id = #{schoolId}
+        <if test="startTime != null">
+            and ur.meeting_date >= #{startTime}
+        </if>
+        <if test="endTime != null">
+            and #{endTime} >= ur.meeting_date
+        </if>
+    </select>
+</mapper>

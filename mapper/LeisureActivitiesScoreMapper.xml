@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.LeisureActivitiesScoreDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.LeisureActivitiesScorePageResModel">
+        SELECT  asr.lenson_id AS courseId,
+                lacr.`name` AS courseName,
+                asr.student_id AS studentId,
+                stu.chinese_name AS studentName,
+                grade.grade_group_name AS groupName,
+                cla.class_name AS className,
+                stu.seat_no AS seatNo,
+                stu.student_no AS studentNo
+        FROM activity_student_report asr
+                LEFT JOIN student_info stu ON stu.id = asr.student_id
+                LEFT JOIN sys_class cla ON cla.id = stu.class_id
+                LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+                LEFT JOIN leisure_activity_courses_record lacr ON lacr.id = asr.lenson_id
+        WHERE asr.deleted = 0 AND asr.status = 2
+        <if test="reqModel.activityId != null and reqModel.activityId > 0">
+            AND asr.activity_id = #{reqModel.activityId}
+        </if>
+        <if test="reqModel.courseId != null and reqModel.courseId > 0">
+            AND asr.lenson_id = #{reqModel.courseId}
+        </if>
+        <if test="reqModel.groupId != null and reqModel.groupId > 0">
+            AND grade.id = #{reqModel.groupId}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND stu.class_id = #{reqModel.classId}
+        </if>
+        <if test="classIds != null and classIds.size() > 0">
+            AND stu.class_id IN
+            <foreach item="item" collection="classIds" separator="," close=")" open="(" index="">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY
+        CASE grade.grade
+        WHEN '中六' THEN 1
+        WHEN '中五' THEN 2
+        WHEN '中四' THEN 3
+        WHEN '中三' THEN 4
+        WHEN '中二' THEN 5
+        WHEN '中一' THEN 6
+        WHEN '六年級' THEN 7
+        WHEN '五年級' THEN 8
+        WHEN '四年級' THEN 9
+        WHEN '三年級' THEN 10
+        WHEN '二年級' THEN 11
+        WHEN '一年級' THEN 12
+        WHEN '幼三' THEN 13
+        WHEN '幼二' THEN 14
+        WHEN '幼一' THEN 15
+        ELSE 999
+        END ASC,
+        cla.class_serial_number DESC,
+        stu.seat_no IS NULL,
+        stu.seat_no ASC
+    </select>
+</mapper>

@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.ActApprovalInstanceDao">
+    <select id="initiated" resultType="com.xiaotiyun.school.manager.model.res.ActApprovalInstanceInitiatedPageResModel">
+        SELECT
+        ai.id AS instanceId,
+        ai.business_id AS businessId,
+        ai.start_time AS initiatedStartTime,
+        business.start_time AS startTime,
+        business.end_time AS endTime,
+        business.reason AS reason,
+        ai.`status` AS status
+        <if test="reqModel.processType != null and reqModel.processType == 1">
+            -- 教师请假
+            ,business.leave_type AS leaveType
+        </if>
+        FROM
+        act_approval_instance ai
+        INNER JOIN act_process_definition apd ON ai.definition_id = apd.id
+        INNER JOIN act_process_template apt ON apd.template_id = apt.id
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            <choose>
+                <when test="reqModel.processType == 1">
+                    -- 教师请假
+                    INNER JOIN teacher_leave business ON business.id = ai.business_id
+                </when>
+                <when test="reqModel.processType == 2">
+                    -- 教师公务
+                    INNER JOIN teacher_business business ON business.id = ai.business_id
+                </when>
+            </choose>
+        </if>
+        WHERE
+        ai.deleted = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND business.school_id = #{schoolId}
+        </if>
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            AND apt.process_type = #{reqModel.processType}
+        </if>
+        <if test="userId != null and userId > 0">
+            AND ai.start_user_id = #{userId}
+        </if>
+        <if test="reqModel.status != null">
+            AND ai.status = #{reqModel.status}
+        </if>
+        ORDER BY
+        ai.create_time DESC
+    </select>
+
+    <select id="pending" resultType="com.xiaotiyun.school.manager.model.res.ActApprovalInstancePendingPageResModel">
+        SELECT
+        task.id AS taskId,
+        ai.id AS instanceId,
+        ai.business_id AS businessId,
+        ai.start_time AS initiatedStartTime,
+        business.start_time AS startTime,
+        business.end_time AS endTime,
+        business.reason AS reason,
+        ai.`status` AS status,
+        ai.start_user_name AS startUserName
+        <if test="reqModel.processType != null and reqModel.processType == 1">
+            -- 教师请假
+            ,business.leave_type AS leaveType
+        </if>
+        FROM
+        act_approval_task task
+        INNER JOIN act_approval_instance ai ON task.instance_id = ai.id
+        INNER JOIN act_process_definition apd ON ai.definition_id = apd.id
+        INNER JOIN act_process_template apt ON apd.template_id = apt.id
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            <choose>
+                <when test="reqModel.processType == 1">
+                    -- 教师请假
+                    INNER JOIN teacher_leave business ON business.id = ai.business_id
+                </when>
+                <when test="reqModel.processType == 2">
+                    -- 教师公务
+                    INNER JOIN teacher_business business ON business.id = ai.business_id
+                </when>
+            </choose>
+        </if>
+        WHERE
+        task.deleted = 0 AND task.`status` = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND business.school_id = #{schoolId}
+        </if>
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            AND apt.process_type = #{reqModel.processType}
+        </if>
+        <if test="userId != null and userId > 0">
+            AND JSON_CONTAINS(task.approver_ids, <![CDATA['${userId}']]>, '$')
+        </if>
+        <if test="reqModel.teacherId != null and reqModel.teacherId > 0">
+            AND ai.start_user_id = #{reqModel.teacherId}
+        </if>
+        <if test="reqModel.endDate != null">
+            AND business.start_time &lt;= CONCAT(#{reqModel.endDate}, ' 23:59:59')
+        </if>
+        <if test="reqModel.startDate != null">
+            AND business.end_time &gt;= CONCAT(#{reqModel.startDate}, ' 00:00:00')
+        </if>
+        ORDER BY
+        task.create_time DESC
+    </select>
+
+    <select id="approved" resultType="com.xiaotiyun.school.manager.model.res.ActApprovalInstanceApprovedPageResModel">
+        SELECT
+        ai.id AS instanceId,
+        ai.business_id AS businessId,
+        ai.start_time AS initiatedStartTime,
+        ai.end_time AS completeTime,
+        business.start_time AS startTime,
+        business.end_time AS endTime,
+        business.reason AS reason,
+        ai.`status` AS status,
+        ai.start_user_name AS startUserName
+        <if test="reqModel.processType != null and reqModel.processType == 1">
+            -- 教师请假
+            ,business.leave_type AS leaveType
+        </if>
+        FROM
+        act_approval_instance ai
+        INNER JOIN act_process_definition apd ON ai.definition_id = apd.id
+        INNER JOIN act_process_template apt ON apd.template_id = apt.id
+        <if test="userId != null and userId > 0">
+            INNER JOIN (SELECT DISTINCT instance_id
+            FROM act_approval_history
+            WHERE operate_user_id = #{userId}
+            ) aah ON ai.id = aah.instance_id
+        </if>
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            <choose>
+                <when test="reqModel.processType == 1">
+                    -- 教师请假
+                    LEFT JOIN teacher_leave business ON business.id = ai.business_id
+                </when>
+                <when test="reqModel.processType == 2">
+                    -- 教师公务
+                    LEFT JOIN teacher_business business ON business.id = ai.business_id
+                </when>
+            </choose>
+        </if>
+        WHERE
+        ai.deleted = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND business.school_id = #{schoolId}
+        </if>
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            AND apt.process_type = #{reqModel.processType}
+        </if>
+        <if test="reqModel.teacherId != null and reqModel.teacherId > 0">
+            AND ai.start_user_id = #{reqModel.teacherId}
+        </if>
+        <if test="reqModel.endDate != null">
+            AND business.start_time &lt;= CONCAT(#{reqModel.endDate}, ' 23:59:59')
+        </if>
+        <if test="reqModel.startDate != null">
+            AND business.end_time &gt;= CONCAT(#{reqModel.startDate}, ' 00:00:00')
+        </if>
+        ORDER BY
+        ai.create_time DESC
+    </select>
+
+    <select id="approvalCompleted" resultType="com.xiaotiyun.school.manager.model.res.ActApprovalInstanceApprovedPageResModel">
+        SELECT
+        ai.id AS instanceId,
+        ai.business_id AS businessId,
+        ai.start_time AS initiatedStartTime,
+        ai.end_time AS completeTime,
+        business.start_time AS startTime,
+        business.end_time AS endTime,
+        business.reason AS reason,
+        ai.`status` AS status,
+        ai.start_user_name AS startUserName
+        <if test="reqModel.processType != null and reqModel.processType == 1">
+            -- 教师请假
+            ,business.leave_type AS leaveType
+        </if>
+        FROM
+        act_approval_instance ai
+        INNER JOIN act_process_definition apd ON ai.definition_id = apd.id
+        INNER JOIN act_process_template apt ON apd.template_id = apt.id
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            <choose>
+                <when test="reqModel.processType == 1">
+                    -- 教师请假
+                    INNER JOIN teacher_leave business ON business.id = ai.business_id
+                </when>
+                <when test="reqModel.processType == 2">
+                    -- 教师公务
+                    INNER JOIN teacher_business business ON business.id = ai.business_id
+                </when>
+            </choose>
+        </if>
+        WHERE
+        ai.deleted = 0 AND ai.status = 2
+        <if test="userId != null and userId > 0">
+            AND EXISTS (
+            SELECT 1 FROM (
+            SELECT instance_id FROM act_approval_history
+            WHERE operate_user_id = #{userId}
+            UNION
+            SELECT instance_id FROM act_approval_cc
+            WHERE cc_user_id = #{userId}
+            ) combined WHERE combined.instance_id = ai.id
+            )
+        </if>
+        <if test="schoolId != null and schoolId > 0">
+            AND business.school_id = #{schoolId}
+        </if>
+        <if test="reqModel.processType != null and reqModel.processType > 0">
+            AND apt.process_type = #{reqModel.processType}
+        </if>
+        <if test="reqModel.teacherId != null and reqModel.teacherId > 0">
+            AND ai.start_user_id = #{reqModel.teacherId}
+        </if>
+        <if test="reqModel.endDate != null">
+            AND business.start_time &lt;= CONCAT(#{reqModel.endDate}, ' 23:59:59')
+        </if>
+        <if test="reqModel.startDate != null">
+            AND business.end_time &gt;= CONCAT(#{reqModel.startDate}, ' 00:00:00')
+        </if>
+        ORDER BY
+        ai.create_time DESC
+    </select>
+</mapper>

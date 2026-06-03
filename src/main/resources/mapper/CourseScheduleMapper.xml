@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.CourseScheduleDao">
+
+    <select id="existsTeacherConflict" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1 FROM course_schedule
+            WHERE school_id = #{schoolId}
+            AND teacher_id = #{teacherId}
+            AND course_date = #{date}
+            AND (
+                (start_time &lt; #{endTime} AND end_time &gt; #{startTime})
+                OR (start_time = #{startTime} AND end_time = #{endTime})
+            )
+            AND deleted = 0
+            <if test="excludeId != null">
+                AND id != #{excludeId}
+            </if>
+        )
+    </select>
+
+    <select id="existsClassroomConflict" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1 FROM course_schedule
+            WHERE school_id = #{schoolId}
+            AND classroom_id = #{classroomId}
+            AND course_date = #{date}
+            AND (
+                (start_time &lt; #{endTime} AND end_time &gt; #{startTime})
+                OR (start_time = #{startTime} AND end_time = #{endTime})
+            )
+            AND deleted = 0
+            <if test="excludeId != null">
+                AND id != #{excludeId}
+            </if>
+        )
+    </select>
+
+</mapper> 

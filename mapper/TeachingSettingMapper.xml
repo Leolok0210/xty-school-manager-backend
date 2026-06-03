@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xiaotiyun.school.manager.dao.TeachingSettingDao">
+
+    <select id="getTeachingSettings" resultType="com.xiaotiyun.school.manager.model.res.TeachingSettingDetailResModel">
+        SELECT ts.id, ts.sid, ts.school_id, ts.class_id, ts.subject_id, ts.teacher_id, ts.create_time, ts.update_time,
+               s.subject_name, u.username as teacherName
+        FROM teaching_setting ts
+        LEFT JOIN subject_rel sr ON ts.subject_id = sr.id
+        LEFT JOIN subject s ON sr.subject_id = s.id
+        LEFT JOIN sys_user_school_rel u ON ts.teacher_id = u.id
+        WHERE ts.deleted = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND ts.school_id = #{schoolId}
+        </if>
+        <if test="sid != null">
+            AND ts.sid = #{sid}
+        </if>
+        <if test="classId != null and classId > 0">
+            AND ts.class_id = #{classId}
+        </if>
+        <if test="subjectId != null and subjectId > 0">
+            AND ts.subject_id = #{subjectId}
+        </if>
+        <if test="teacherId != null and teacherId > 0">
+            AND ts.teacher_id = #{teacherId}
+        </if>
+        <if test="subjectName != null">
+            AND s.subject_name = #{subjectName}
+        </if>
+        <if test="teacherName != null">
+            AND u.username = #{teacherName}
+        </if>
+        order by ts.create_time desc
+    </select>
+
+    <select id="getTeachingSettingsByRole" resultType="com.xiaotiyun.school.manager.model.res.TeachingSettingRoleResModel">
+        SELECT
+            su.id,
+            susr.id as teacherId,
+            susr.username as teacherName,
+            su.mobile as teacherPhoneNumber
+        FROM sys_user_school_rel susr
+        LEFT JOIN sys_user su ON susr.user_id = su.id
+        LEFT JOIN (SELECT teacher_id,'0' as deleted FROM teaching_setting WHERE deleted =0 GROUP BY teacher_id) ts ON susr.id = ts.teacher_id
+        WHERE susr.deleted = 0 and ts.deleted = 0
+        <if test="schoolId != null and schoolId > 0">
+            AND susr.school_id = #{schoolId}
+        </if>
+        <if test="teacherId != null and teacherId > 0">
+            AND susr.id = #{teacherId}
+        </if>
+        <if test="teacherName != null and teacherName != ''">
+            AND susr.username LIKE CONCAT('%', #{teacherName}, '%')
+        </if>
+        order by susr.create_time desc
+    </select>
+    <!-- 根据需要添加SQL语句 -->
+
+</mapper>

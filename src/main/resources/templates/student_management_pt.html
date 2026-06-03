@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sistema de Gestão Estudantil</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                width: 210mm;
+            }
+
+            .container {
+                width: 210mm;
+                min-height: 297mm;
+                padding: 15mm;
+                margin: 0;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+                page-break-after: always;
+            }
+
+            .toggle-button {
+                display: none;
+            }
+        }
+
+
+        body {
+            font-family: 'SimSun', '宋体', serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 5mm;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            /*background-color: #fff;*/
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 25px;
+            padding: 10px 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .header-row {
+            display: flex;
+            /*justify-content: space-between;*/
+            border-bottom: 1px solid #000;
+            padding-top: 12px;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            width: 100%;
+        }
+
+        .header-item {
+            display: flex;
+            /*padding: 0 15px;*/
+
+        }
+
+        /*.header-row .header-item:nth-child(2),*/
+        /*.header-row .header-item:nth-child(3) {*/
+        /*    flex-direction: column;*/
+        /*    align-items: flex-end;*/
+        /*    color: #444;*/
+        /*    font-weight: 500;*/
+        /*}*/
+
+        /*.header-row .header-item:first-child {*/
+        /*    font-weight: bold;*/
+        /*    justify-content: center;*/
+        /*    text-align: center;*/
+        /*}*/
+
+        .student-info {
+            margin-bottom: 25px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+        }
+
+        .student-info>div:first-child,
+        .comment-section>div:first-child {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            table-layout: fixed;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+        }
+
+        th {
+            background-color: #e9f2fb;
+            color: #2c3e50;
+            font-weight: 600;
+            position: relative;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tbody tr:hover {
+            background-color: #f0f7ff;
+        }
+
+        .signature-section table th {
+            background-color: #d4e6f6;
+        }
+
+        .signature-section h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: normal;
+        }
+
+        .signature-section table {
+            width: 100%;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #000;
+            margin: 20px 0;
+        }
+
+        .comment-section {
+            margin-bottom: 25px;
+            padding: 5px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+        }
+
+        .signature-section {
+            display: flex;
+            /*justify-content: space-between;*/
+        }
+
+        .signature-box {
+            width: 49%;
+            border-top: 1px solid #000;
+            text-align: center;
+            padding-top: 10px;
+            display: inline-block;
+        }
+
+        .no-data {
+            padding: 20px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <hr/>
+    <div class="header-row">
+        <div class="header-item" style="text-align: left; width: 48%; display: inline-block; padding-left: 1%; padding-top: 23px">
+            <div style="justify-items: center; display: inline-block;"><span th:text="${teacherNumber}"></span></div>
+            <div style="color: red; margin-left: 10px; display: inline-block;"><span th:text="${teacherName}"></span></div>
+            <div style="margin-left: 10px; display: inline-block;"><span th:text="${classNumber}"></span></div>
+        </div>
+        <div class="header-item" style="text-align: right; width: 48%; display: inline-block;padding-right: 1%">
+            <div>Data do Relatório: <span th:text="${reportTime}"></span></div>
+            <div>Faltas/Advertências Atualizadas Até: <span th:text="${updateTime}"></span></div>
+        </div>
+    </div>
+    <div id = "content" style="page-break-after: always;" th:each="item : ${items}">
+    <div class="header-row">
+        <div class="header-item" style="text-align: left; display: inline-block;">
+            <div style="display: inline-block;"><span th:text="${item.studentNumber}"></span></div>
+            <div style="color: red; margin-left: 20px; display: inline-block;"><span th:text="${item.studentName}"></span></div>
+        </div>
+
+    </div>
+
+    <div class="student-info">
+        <div>Disciplinas Reprovadas</div>
+        <table id="subject-table">
+            <thead>
+            <tr>
+                <th>Nome da Disciplina</th>
+                <th>Tipo de Avaliação</th>
+                <th>Nota</th>
+                <th>Data da Prova</th>
+                <th>Nome do Professor</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="record : ${item.records}">
+                <td th:text="${record.activityName}"></td>
+                <td th:text="${record.careLevel}"></td>
+                <td th:text="${record.score}"></td>
+                <td th:text="${record.date}"></td>
+                <td th:text="${record.teacherName}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="no-data" id="subject-no-data" style="display: none;"></div>
+    </div>
+
+    <div class="comment-section">
+        <div>Assuntos Oficiais:</div>
+        <table id="official-table">
+            <thead>
+            <tr>
+                <th>Hora de Início</th>
+                <th>Hora de Término</th>
+                <th>Motivo</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="official : ${item.official}">
+                <td th:text="${official.startTime}"></td>
+                <td th:text="${official.endTime}"></td>
+                <td th:text="${official.task}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="no-data" id="official-no-data" style="display: none;"></div>
+    </div>
+
+    <div class="comment-section">
+        <div>Formativo:</div>
+        <table id="formative-table">
+            <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Data do Evento</th>
+                <th>Item</th>
+                <th>Total</th>
+                <th>Observações</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="formative : ${item.formative}">
+                <td th:text="${formative.type}"></td>
+                <td th:text="${formative.date}"></td>
+                <td th:text="${formative.project}"></td>
+                <td th:text="${formative.sum}"></td>
+                <td th:text="${formative.remarks}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="no-data" id="formative-no-data" style="display: none;"></div>
+    </div>
+
+    <div class="comment-section">
+        <div>Resumo (Baseado nas Características Formativas Acima):</div>
+        <table id="summary-table">
+            <thead>
+            <tr>
+                <th>Data do Evento</th>
+                <th>Item</th>
+                <th>Observações</th>
+                <th>Registro</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="summary : ${item.summary}">
+                <td th:text="${summary.date}"></td>
+                <td th:text="${summary.project}"></td>
+                <td th:text="${summary.remarks}"></td>
+                <td th:text="${summary.records}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="no-data" id="summary-no-data" style="display: none;"></div>
+    </div>
+
+
+    <div class="signature-section">
+        <div th:each="yearRecord : ${item.yearRecord}" class="signature-box">
+            <h3><span th:text="${yearRecord.name}"></span> Registro de Faltas/Advertências</h3>
+            <table th:id="'record-table-' + ${yearRecord.index}">
+                <thead>
+                <tr>
+                    <th>Número de Matrícula Anual</th>
+                    <th>Grave</th>
+                    <th>Leve</th>
+                    <th>Falta</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td th:text="${yearRecord.number}"></td>
+                    <td th:text="${yearRecord.big}"></td>
+                    <td th:text="${yearRecord.mini}"></td>
+                    <td th:text="${yearRecord.defect}"></td>
+                </tr>
+                </tbody>
+            </table>
+            <div th:id="'record-no-data-' + ${yearRecord.index}" class="no-data" style="display: none;"></div>
+        </div>
+    </div>
+    <hr/>
+</div>
+</div>
+</body>
+
+</html>

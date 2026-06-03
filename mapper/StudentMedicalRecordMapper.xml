@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xiaotiyun.school.manager.dao.StudentMedicalRecordDao">
+    <select id="page" resultType="com.xiaotiyun.school.manager.model.res.MedicalRecordResModel">
+        SELECT  smr.id                     AS id,
+                smr.school_year            AS schoolYear,
+                grade.id                   AS classGroupId,
+                grade.grade_group_name     AS classGroupName,
+                cla.id                     AS classId,
+                cla.class_name             AS className,
+                smr.student_id             AS studentId,
+                smr.student_name           AS studentName,
+                stu.gender                 AS gender,
+                sma.allergy                AS allergy,
+                sma.serious_chronic_disease AS seriousChronicDisease,
+                sma.medical_notes          AS medicalNotes,
+                sh.name                    AS hospital,
+                smr.chief_complaint        AS chiefComplaint,
+                smr.treatment              AS treatment,
+                smr.notes                  AS notes,
+                smr.consultation_date      AS consultationDate,
+                smr.temperature            AS temperature,
+                smr.fever                  AS fever,
+                smr.cough                  AS cough,
+                smr.runny_nose             AS runny_nose,
+                smr.sore_throat            AS sore_throat,
+                smr.dizziness              AS dizziness,
+                smr.headache               AS headache,
+                smr.nosebleed              AS nosebleed,
+                smr.nausea                 AS nausea,
+                smr.vomiting_count         AS vomitingCount,
+                smr.abdominal_pain         AS abdominalPain,
+                smr.diarrhea_count         AS diarrheaCount
+        FROM student_medical_record smr
+        LEFT JOIN student_medical_attention sma on sma.student_id = smr.student_id
+        LEFT JOIN student_info stu ON stu.id = smr.student_id
+        LEFT JOIN sys_class cla ON cla.id = stu.class_id
+        LEFT JOIN grade_group grade ON grade.id = cla.grade_group
+        LEFT JOIN sys_hospital sh ON sh.id = stu.emergency_hospital
+        WHERE smr.deleted = 0
+        <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
+            AND smr.school_id = #{reqModel.schoolId}
+        </if>
+        <if test="reqModel.schoolYear != null">
+            AND smr.school_year = #{reqModel.schoolYear}
+        </if>
+        <if test="reqModel.classId != null and reqModel.classId > 0">
+            AND smr.class_id = #{reqModel.classId}
+        </if>
+        <if test="reqModel.studentId != null and reqModel.studentId > 0">
+            AND smr.student_id = #{reqModel.studentId}
+        </if>
+        <if test="reqModel.startDate != null and reqModel.startDate != ''">
+            AND smr.consultation_date &gt;= #{reqModel.startDate}
+        </if>
+        <if test="reqModel.endDate != null and reqModel.endDate != ''">
+            AND smr.consultation_date &lt;= #{reqModel.endDate}
+        </if>
+        ORDER BY smr.create_time desc
+    </select>
+</mapper>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.UserSchoolRelDao">
+    <!-- 批量插入 -->
+    <insert id="insertBatch">
+        INSERT INTO sys_user_school_rel
+            (user_id, school_id, create_time, update_time, deleted)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.userId}, #{item.schoolId}, NOW(), NOW(), 0)
+        </foreach>
+    </insert>
+
+    <select id="getListByPhones" resultType="com.xiaotiyun.school.manager.model.dto.UserSchoolRelDTO">
+        SELECT susr.user_id  AS userId,
+               susr.username AS userName,
+               su.mobile     AS phone
+        FROM sys_user_school_rel susr
+                 LEFT JOIN sys_user su ON su.id = susr.user_id
+        WHERE susr.deleted = 0
+          AND su.deleted = 0
+          AND susr.school_id = #{schoolId}
+          AND su.mobile IN
+        <foreach collection="phones" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+</mapper>
