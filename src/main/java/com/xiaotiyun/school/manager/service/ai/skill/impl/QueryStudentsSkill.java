@@ -122,7 +122,7 @@ public class QueryStudentsSkill implements AiSkill {
             for (StudentPageResModel s : pageInfo.getList()) {
                 Map<String, Object> card = new HashMap<>();
                 // 保留 id 以便後續成績查詢使用
-                card.put("id", s.getStudentId() != null ? s.getStudentId() : 0);
+                card.put("id", s.getId() != null ? s.getId() : 0);
                 card.put("姓名", s.getStudentName() != null ? s.getStudentName() : "");
                 card.put("性別", s.getGender() != null ? (s.getGender() == 1 ? "男" : "女") : "");
                 card.put("學號", s.getStudentNo() != null ? s.getStudentNo() : "");
