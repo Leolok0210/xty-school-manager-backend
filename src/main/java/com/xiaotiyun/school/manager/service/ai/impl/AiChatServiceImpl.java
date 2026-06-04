@@ -117,11 +117,12 @@ public class AiChatServiceImpl implements AiChatService {
                             schoolId
                         );
 
-                        // 更新用戶習慣
+                        // 更新用戶習慣（即使是匿名用戶也追蹤）
                         try {
-                            if (userId != null && userId > 0) {
-                                userHabitService.updateHabit(userId, schoolId, lastMsg.getContent());
+                            if (userId == null || userId <= 0) {
+                                userId = 0L; // 匿名用戶
                             }
+                            userHabitService.updateHabit(userId, schoolId, lastMsg.getContent());
                         } catch (Exception e) {
                             log.debug("Failed to update user habit, skipping: {}", e.getMessage());
                         }
