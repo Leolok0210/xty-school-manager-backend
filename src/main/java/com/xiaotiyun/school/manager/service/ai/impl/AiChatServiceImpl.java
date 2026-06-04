@@ -52,6 +52,9 @@ public class AiChatServiceImpl implements AiChatService {
     @Resource
     private com.xiaotiyun.school.manager.service.AiLearningService aiLearningService;
 
+    @Resource
+    private com.xiaotiyun.school.manager.service.UserHabitService userHabitService;
+
     private String systemPrompt;
 
     @PostConstruct
@@ -113,6 +116,15 @@ public class AiChatServiceImpl implements AiChatService {
                             resModel.getContent(),
                             schoolId
                         );
+
+                        // 更新用戶習慣
+                        try {
+                            if (userId != null && userId > 0) {
+                                userHabitService.updateHabit(userId, schoolId, lastMsg.getContent());
+                            }
+                        } catch (Exception e) {
+                            log.debug("Failed to update user habit, skipping: {}", e.getMessage());
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -279,7 +291,22 @@ private Long getCurrentSchoolId() {
         }
 
         String schoolContext = schoolName.isEmpty() ? "" : "【當前學校】" + schoolName + "\n\n";
-        String fullSystemPrompt = systemPrompt + "\n\n" + schoolContext + knowledgeContext;
+
+        // 獲取用戶習慣上下文
+        String userHabitContext = "";
+        try {
+            Long userId = getCurrentUserId();
+            if (userId != null && userId > 0) {
+                List<String> frequentClasses = userHabitService.getFrequentClasses(userId);
+                if (frequentClasses != null && !frequentClasses.isEmpty()) {
+                    userHabitContext = "【用戶常用班級】" + String.join("、", frequentClasses) + "\n";
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Failed to load user habit context: {}", e.getMessage());
+        }
+
+        String fullSystemPrompt = systemPrompt + "\n\n" + schoolContext + userHabitContext + knowledgeContext;
 
         JSONArray messages = new JSONArray();
 
