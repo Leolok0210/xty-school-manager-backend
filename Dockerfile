@@ -16,7 +16,7 @@ ENV SPRING_PROFILES_ACTIVE=prod
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
