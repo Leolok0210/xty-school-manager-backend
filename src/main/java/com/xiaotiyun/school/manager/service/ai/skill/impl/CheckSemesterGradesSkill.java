@@ -1,13 +1,12 @@
 package com.xiaotiyun.school.manager.service.ai.skill.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.xiaotiyun.school.manager.dao.StudentExamScoreMapper;
 import com.xiaotiyun.school.manager.model.req.StudentExamScoreReqModel;
 import com.xiaotiyun.school.manager.model.res.StudentExamScoreResModel;
-import com.xiaotiyun.school.manager.service.StudentExamScoreService;
 import com.xiaotiyun.school.manager.service.ai.skill.AiContext;
 import com.xiaotiyun.school.manager.service.ai.skill.AiSkill;
 import com.xiaotiyun.school.manager.service.ai.skill.SkillResult;
-import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +18,7 @@ import java.util.*;
 public class CheckSemesterGradesSkill implements AiSkill {
 
     @Resource
-    private StudentExamScoreService studentExamScoreService;
+    private StudentExamScoreMapper studentExamScoreMapper;
 
     @Override
     public String getName() {
@@ -67,21 +66,20 @@ public class CheckSemesterGradesSkill implements AiSkill {
             if (studentId != null) reqModel.setStudentId(studentId);
             if (semesterId != null) reqModel.setSemesterId(semesterId);
             if (subjectId != null) reqModel.setSubjectId(subjectId);
-            reqModel.setPageNum(1);
-            reqModel.setPageSize(100);
 
-            PageInfo<StudentExamScoreResModel> pageInfo = studentExamScoreService.pageByStudent(reqModel);
+            // 直接使用 mapper 查詢，繞過 session 檢查
+            List<StudentExamScoreResModel> list = studentExamScoreMapper.scoreListByStudent(reqModel);
 
             List<Map<String, Object>> cards = new ArrayList<>();
-            for (StudentExamScoreResModel score : pageInfo.getList()) {
+            for (StudentExamScoreResModel score : list) {
                 Map<String, Object> card = new HashMap<>();
-                card.put("subjectName", score.getSubjectName() != null ? score.getSubjectName() : "");
-                card.put("score", score.getScore() != null ? score.getScore() : "");
-                card.put("examTime", score.getExamTime() != null ? score.getExamTime().toString() : "");
+                card.put("科目", score.getSubjectName() != null ? score.getSubjectName() : "");
+                card.put("分數", score.getScore() != null ? score.getScore() : "");
+                card.put("考試時間", score.getExamTime() != null ? score.getExamTime().toString() : "");
                 cards.add(card);
             }
 
-            return SkillResult.ok("查到 " + pageInfo.getTotal() + " 筆考試成績", null, cards);
+            return SkillResult.ok("查到 " + list.size() + " 筆考試成績", null, cards);
         } catch (Exception e) {
             log.error("check_semester_grades error", e);
             return SkillResult.fail("查詢學期成績失敗：" + e.getMessage());
