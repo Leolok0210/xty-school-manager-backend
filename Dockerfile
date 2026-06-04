@@ -12,7 +12,7 @@ WORKDIR /app
 
 COPY --from=builder /app/target/xty-school-manager.jar /app/app.jar
 
-ENV SPRING_PROFILES_ACTIVE=dev
+ENV SPRING_PROFILES_ACTIVE=prod
 
 EXPOSE 8080
 
