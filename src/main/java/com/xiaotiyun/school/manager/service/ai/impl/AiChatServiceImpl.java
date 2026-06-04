@@ -436,6 +436,51 @@ private Long getCurrentSchoolId() {
                                 List<AiChatResModel.DataCard> cards = convertToDataCards(result.getDataCards(), functionName);
                                 resModel.setDataCards(cards);
                             }
+
+                            // 如果是 query_students 且用戶詢問成績，自動查詢成績
+                            if ("query_students".equals(functionName) && isGradeRelatedQuery(reqModel)) {
+                                List<Long> studentIds = extractStudentIdsFromResult(result);
+                                if (!studentIds.isEmpty()) {
+                                    for (Long studentId : studentIds) {
+                                        // 查詢學期成績
+                                        AiSkill gradeSkill = skillRegistry.get("check_semester_grades");
+                                        if (gradeSkill != null) {
+                                            JSONObject gradeArgs = new JSONObject();
+                                            gradeArgs.put("studentId", studentId);
+                                            SkillResult gradeResult = gradeSkill.execute(gradeArgs, context);
+                                            if (gradeResult.getMessage() != null && !gradeResult.getMessage().isEmpty()) {
+                                                sb.append("\n\n").append(gradeResult.getMessage());
+                                            }
+                                            if (gradeResult.getDataCards() != null && !gradeResult.getDataCards().isEmpty()) {
+                                                List<AiChatResModel.DataCard> gradeCards = convertToDataCards(gradeResult.getDataCards(), "check_semester_grades");
+                                                if (resModel.getDataCards() == null) {
+                                                    resModel.setDataCards(gradeCards);
+                                                } else {
+                                                    resModel.getDataCards().addAll(gradeCards);
+                                                }
+                                            }
+                                        }
+                                        // 查詢日常成績
+                                        AiSkill dailySkill = skillRegistry.get("query_daily_grades");
+                                        if (dailySkill != null) {
+                                            JSONObject dailyArgs = new JSONObject();
+                                            dailyArgs.put("studentId", studentId);
+                                            SkillResult dailyResult = dailySkill.execute(dailyArgs, context);
+                                            if (dailyResult.getMessage() != null && !dailyResult.getMessage().isEmpty()) {
+                                                sb.append("\n\n").append(dailyResult.getMessage());
+                                            }
+                                            if (dailyResult.getDataCards() != null && !dailyResult.getDataCards().isEmpty()) {
+                                                List<AiChatResModel.DataCard> dailyCards = convertToDataCards(dailyResult.getDataCards(), "query_daily_grades");
+                                                if (resModel.getDataCards() == null) {
+                                                    resModel.setDataCards(dailyCards);
+                                                } else {
+                                                    resModel.getDataCards().addAll(dailyCards);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             // 移除原始 JSON 輸出，避免洩露內部數據
                         } else {
                             // 未知技能，只顯示提示訊息，不顯示技能名稱
@@ -500,7 +545,8 @@ private Long getCurrentSchoolId() {
                        content.contains("英文") || content.contains("中文") ||
                        content.contains("化學") || content.contains("生物") ||
                        content.contains("歷史") || content.contains("地理") ||
-                       content.contains("科目");
+                       content.contains("科目") || content.contains("所有") ||
+                       content.contains("查詢");
             }
         }
         return false;
