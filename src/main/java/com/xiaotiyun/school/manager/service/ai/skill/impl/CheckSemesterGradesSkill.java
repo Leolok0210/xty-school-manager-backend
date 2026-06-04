@@ -75,7 +75,14 @@ public class CheckSemesterGradesSkill implements AiSkill {
             for (StudentExamScoreResModel score : list) {
                 Map<String, Object> card = new HashMap<>();
                 card.put("科目", score.getSubjectName() != null ? score.getSubjectName() : "");
-                card.put("分數", score.getScore() != null ? score.getScore() : "");
+                // 分數可能 x100 儲存，需要除以 100 顯示
+                Object scoreObj = score.getScore();
+                if (scoreObj != null) {
+                    double rawScore = ((Number) scoreObj).doubleValue();
+                    card.put("分數", rawScore >= 100 ? rawScore / 100 : rawScore);
+                } else {
+                    card.put("分數", "");
+                }
                 card.put("考試時間", score.getExamTime() != null ? score.getExamTime().toString() : "");
                 cards.add(card);
             }

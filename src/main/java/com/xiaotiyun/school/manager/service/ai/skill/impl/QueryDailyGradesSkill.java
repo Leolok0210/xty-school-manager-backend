@@ -74,7 +74,14 @@ public class QueryDailyGradesSkill implements AiSkill {
                     Map<String, Object> card = new HashMap<>();
                     card.put("studentId", studentId);
                     card.put("科目", score.getSubjectName() != null ? score.getSubjectName() : "");
-                    card.put("分數", score.getScore() != null ? score.getScore() : "");
+                    // 分數可能 x100 儲存，需要除以 100 顯示
+                    Object scoreObj = score.getScore();
+                    if (scoreObj != null) {
+                        double rawScore = ((Number) scoreObj).doubleValue();
+                        card.put("分數", rawScore >= 100 ? rawScore / 100 : rawScore);
+                    } else {
+                        card.put("分數", "");
+                    }
                     card.put("類型", score.getTestTypeName() != null ? score.getTestTypeName() : "");
                     card.put("時間", score.getTestTime() != null ? score.getTestTime().toString() : "");
                     cards.add(card);
