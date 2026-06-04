@@ -5,7 +5,7 @@ spring:
       max-request-size: 200MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/xty_school_manager?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_general_ci&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    url: jdbc:mysql://117.88.94.20:13049/xty_school_manager?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_general_ci&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
     username: root
     password: 7XyQbbcdfgrG5*7w
     type: com.alibaba.druid.pool.DruidDataSource
