@@ -1,13 +1,12 @@
 package com.xiaotiyun.school.manager.service.ai.skill.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.xiaotiyun.school.manager.dao.StudentUsuallyScoreMapper;
 import com.xiaotiyun.school.manager.model.req.StudentUsuallyScoreReqModel;
 import com.xiaotiyun.school.manager.model.res.StudentUsuallyScoreResModel;
-import com.xiaotiyun.school.manager.service.StudentUsuallyScoreService;
 import com.xiaotiyun.school.manager.service.ai.skill.AiContext;
 import com.xiaotiyun.school.manager.service.ai.skill.AiSkill;
 import com.xiaotiyun.school.manager.service.ai.skill.SkillResult;
-import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +18,7 @@ import java.util.*;
 public class QueryDailyGradesSkill implements AiSkill {
 
     @Resource
-    private StudentUsuallyScoreService studentUsuallyScoreService;
+    private StudentUsuallyScoreMapper studentUsuallyScoreMapper;
 
     @Override
     public String getName() {
@@ -59,7 +58,6 @@ public class QueryDailyGradesSkill implements AiSkill {
             Long classId = params.get("classId") != null ? ((Number) params.get("classId")).longValue() : null;
             Long studentId = params.get("studentId") != null ? ((Number) params.get("studentId")).longValue() : null;
             Long semesterId = params.get("semesterId") != null ? ((Number) params.get("semesterId")).longValue() : null;
-            Long schoolId = params.get("schoolId") != null ? ((Number) params.get("schoolId")).longValue() : context.getSchoolId();
 
             if (classId == null && studentId == null) {
                 return SkillResult.fail("需要提供班級 ID 或學生 ID");
@@ -70,28 +68,15 @@ public class QueryDailyGradesSkill implements AiSkill {
             if (studentId != null) {
                 StudentUsuallyScoreReqModel reqModel = new StudentUsuallyScoreReqModel();
                 reqModel.setStudentId(studentId);
-                if (semesterId != null) reqModel.setSemesterId(semesterId);
-                PageInfo<StudentUsuallyScoreResModel> pageInfo = studentUsuallyScoreService.pageByStudent(reqModel);
-                for (StudentUsuallyScoreResModel score : pageInfo.getList()) {
+                if (semesterId != null && semesterId > 0) reqModel.setSemesterId(semesterId);
+                List<StudentUsuallyScoreResModel> list = studentUsuallyScoreMapper.getScoreListByStudent(reqModel);
+                for (StudentUsuallyScoreResModel score : list) {
                     Map<String, Object> card = new HashMap<>();
                     card.put("studentId", studentId);
-                    card.put("subjectName", score.getSubjectName() != null ? score.getSubjectName() : "");
-                    card.put("score", score.getScore() != null ? score.getScore() : "");
-                    card.put("testTypeName", score.getTestTypeName() != null ? score.getTestTypeName() : "");
-                    card.put("testTime", score.getTestTime() != null ? score.getTestTime().toString() : "");
-                    cards.add(card);
-                }
-            } else if (classId != null && semesterId != null) {
-                StudentUsuallyScoreReqModel reqModel = new StudentUsuallyScoreReqModel();
-                reqModel.setSemesterId(semesterId);
-                PageInfo<StudentUsuallyScoreResModel> pageInfo = studentUsuallyScoreService.pageByStudent(reqModel);
-                for (StudentUsuallyScoreResModel score : pageInfo.getList()) {
-                    Map<String, Object> card = new HashMap<>();
-                    card.put("studentId", score.getStudentId() != null ? score.getStudentId() : 0);
-                    card.put("subjectName", score.getSubjectName() != null ? score.getSubjectName() : "");
-                    card.put("score", score.getScore() != null ? score.getScore() : "");
-                    card.put("testTypeName", score.getTestTypeName() != null ? score.getTestTypeName() : "");
-                    card.put("testTime", score.getTestTime() != null ? score.getTestTime().toString() : "");
+                    card.put("科目", score.getSubjectName() != null ? score.getSubjectName() : "");
+                    card.put("分數", score.getScore() != null ? score.getScore() : "");
+                    card.put("類型", score.getTestTypeName() != null ? score.getTestTypeName() : "");
+                    card.put("時間", score.getTestTime() != null ? score.getTestTime().toString() : "");
                     cards.add(card);
                 }
             }
