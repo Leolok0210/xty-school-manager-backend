@@ -87,7 +87,7 @@ public class CheckSemesterGradesSkill implements AiSkill {
         }
     }
 
-    // Helper method for creating parameter maps
+    // Helper method for creating parameter maps - updated
     private Map<String, Object> createMap(Object... kvs) {
         Map<String, Object> map = new HashMap<>();
         for (int i = 0; i < kvs.length; i += 2) {
