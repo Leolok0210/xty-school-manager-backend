@@ -64,8 +64,9 @@ public class CheckSemesterGradesSkill implements AiSkill {
 
             StudentExamScoreReqModel reqModel = new StudentExamScoreReqModel();
             if (studentId != null) reqModel.setStudentId(studentId);
-            if (semesterId != null) reqModel.setSemesterId(semesterId);
-            if (subjectId != null) reqModel.setSubjectId(subjectId);
+            // semesterId 為 null 時不限制學期，查詢所有學期成績
+            if (semesterId != null && semesterId > 0) reqModel.setSemesterId(semesterId);
+            if (subjectId != null && subjectId > 0) reqModel.setSubjectId(subjectId);
 
             // 直接使用 mapper 查詢，繞過 session 檢查
             List<StudentExamScoreResModel> list = studentExamScoreMapper.scoreListByStudent(reqModel);

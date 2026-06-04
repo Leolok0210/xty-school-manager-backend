@@ -108,7 +108,9 @@
                  LEFT JOIN `subject` s ON s.id = sr.subject_id AND s.deleted = 0
         WHERE score.deleted = 0
           AND score.student_id = ${reqModel.studentId}
-          AND task.period_id = ${reqModel.semesterId}
+          <if test="reqModel.semesterId != null and reqModel.semesterId > 0">
+            AND task.period_id = ${reqModel.semesterId}
+          </if>
           <if test="reqModel.subjectId != null and reqModel.subjectId > 0">
             AND sr.subject_id = ${reqModel.subjectId}
           </if>
