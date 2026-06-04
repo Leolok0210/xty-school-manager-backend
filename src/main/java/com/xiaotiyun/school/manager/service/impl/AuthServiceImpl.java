@@ -75,8 +75,19 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(LanguageConstants.ACCOUNT_NOT_EXIST);
         }
 
-// 2. 校验密码 (前端已使用SHA256加密，直接比對)
-        if (!reqModel.getPassword().equals(user.getPassword())) {
+// 2. 校驗密碼
+        String inputPassword = reqModel.getPassword();
+        String storedPassword = user.getPassword();
+        boolean matched = false;
+
+        // 先嘗試 BCrypt（適用於 updatePassword 使用 BCrypt 存儲的密碼）
+        if (storedPassword != null && storedPassword.startsWith("$2")) {
+            matched = BCrypt.checkpw(inputPassword, storedPassword);
+        } else {
+            // 兼容 SHA256 格式或其他舊格式密碼
+            matched = inputPassword.equals(storedPassword);
+        }
+        if (!matched) {
             throw new BusinessException(LanguageConstants.ACCOUNT_OR_PASSWORD_ERROR);
         }
 
