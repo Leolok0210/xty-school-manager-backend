@@ -19,6 +19,7 @@ import com.xiaotiyun.school.manager.model.res.ActivityStudentApplyNotAdmittedLis
 import com.xiaotiyun.school.manager.model.res.ActivityStudentApplyNotRegisteredListResModel;
 import com.xiaotiyun.school.manager.model.res.ActivityStudentApplyRegisteredListResModel;
 import com.xiaotiyun.school.manager.service.*;
+import org.springframework.context.annotation.Lazy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -53,6 +54,7 @@ public class NoticeServiceImpl implements NoticeService {
     @Resource
     private SysFileService sysFileService;
     @Resource
+    @Lazy
     private EnterpriseWechatNoticeService enterpriseWechatNoticeService;
     @Resource
     private EnterpriseWechatService enterpriseWechatService;

@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -42,6 +43,7 @@ public class EnterpriseWechatNoticeServiceImpl extends ServiceImpl<EnterpriseWec
     private final SysFileRelevanceService sysFileRelevanceService;
     private final SysFileService sysFileService;
     private final UserSchoolRelService userSchoolRelService;
+    @Lazy
     private final NoticeService noticeService;
 
     /**
