@@ -11,11 +11,11 @@ spring:
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
       # 初始连接数
-      initial-size: 5
+      initial-size: 1
       # 最小连接池数量
-      min-idle: 10
+      min-idle: 2
       # 最大连接池数量
-      max-active: 20
+      max-active: 5
       # 配置获取连接等待超时的时间
       max-wait: 60000
       # 配置间隔多久才进行一次检测,检测需要关闭的空闲连接,单位是毫秒
@@ -37,16 +37,16 @@ mybatis-plus:
 
 logging:
   level:
-    root: INFO
-    # 启用SQL语句和参数打印
-    org.apache.ibatis: DEBUG
-    com.baomidou.mybatisplus: DEBUG
-    # 禁用结果集处理日志，避免打印列信息和行数据
+    root: WARN
+    # 禁用SQL语句和参数打印
+    org.apache.ibatis: WARN
+    com.baomidou.mybatisplus: WARN
+    # 禁用结果集处理日志
     org.apache.ibatis.executor.resultset: WARN
     org.apache.ibatis.executor.resultset.ResultSetWrapper: WARN
     org.apache.ibatis.executor.resultset.DefaultResultSetHandler: WARN
     # Mapper日志
-    com.xiaotiyun.school.manager.mapper: DEBUG
+    com.xiaotiyun.school.manager.mapper: WARN
   config: classpath:logback-spring.xml
 
 # Sa-Token配置
