@@ -253,8 +253,10 @@ public class AiChatServiceImpl implements AiChatService {
         List<AiChatMessageEntity> messages = aiChatSessionService.getSessionMessages(sessionId);
         return messages.stream().map(msg -> {
             Map<String, Object> map = new HashMap<>();
+            map.put("id", msg.getId());
             map.put("role", msg.getRole());
             map.put("content", msg.getContent());
+            map.put("createTime", msg.getCreateTime());
             return map;
         }).collect(Collectors.toList());
     }
