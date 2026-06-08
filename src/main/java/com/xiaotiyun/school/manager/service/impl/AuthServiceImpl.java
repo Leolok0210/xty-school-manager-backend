@@ -20,6 +20,7 @@ import com.xiaotiyun.school.manager.service.AuthService;
 import com.xiaotiyun.school.manager.service.MenuService;
 import com.xiaotiyun.school.manager.service.UserGroupService;
 import com.xiaotiyun.school.manager.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -32,6 +33,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -93,10 +95,20 @@ public class AuthServiceImpl implements AuthService {
 
         // 生成token
         StpUtil.login(user.getId());
-        // 保存用户信息
+        // 保存用户信息（清除密码字段以减小session内存占用）
+        user.setPassword(null);
         StpUtil.getSession().set("userInfo", user);
 
-        return getUserLoginData(user);
+        try {
+            return getUserLoginData(user);
+        } catch (Exception e) {
+            // 登录数据加载失败时，返回最小化响应而不是crash
+            log.warn("加载用户登录数据失败，返回最小化响应: userId={}, error={}", user.getId(), e.getMessage(), e);
+            LoginResModel resModel = new LoginResModel();
+            resModel.setToken(StpUtil.getTokenValue());
+            resModel.setNeedResetPwd(user.getNeedResetPwd());
+            return resModel;
+        }
     }
 
     @Override
@@ -288,34 +300,34 @@ public class AuthServiceImpl implements AuthService {
                 resModel.setUserDetailResModel(userInfo);
             }
 
-            // 创建一个schoolAndUserInfoList
+            // 批量获取所有学校信息，避免N+1查询和内存压力
+            List<Long> schoolIds = userSchoolRelList.stream()
+                    .map(UserSchoolRelEntity::getSchoolId)
+                    .collect(Collectors.toList());
+            Map<Long, SchoolEntity> schoolMap = schoolService.listByIds(schoolIds).stream()
+                    .collect(Collectors.toMap(SchoolEntity::getId, Function.identity()));
+
             List<SchoolInfoResModel> schoolAndUserInfoList = new ArrayList<>();
+            LocalDateTime now = LocalDateTime.now();
 
-            // 循环userSchoolRelList，获取每个学校的用户信息，并且组装到res中
             for (UserSchoolRelEntity userSchoolRel : userSchoolRelList) {
-
                 SchoolInfoResModel schoolInfo = new SchoolInfoResModel();
                 schoolInfo.setSchoolId(userSchoolRel.getSchoolId());
 
-                // 获取学校详细信息
-                SchoolEntity school = schoolService.getById(userSchoolRel.getSchoolId());
+                SchoolEntity school = schoolMap.get(userSchoolRel.getSchoolId());
                 if(school != null){
                     schoolInfo.setSchoolName(school.getName());
-                    // 计算剩余天数
                     if (school.getExpireTime() == null) {
-                        schoolInfo.setRemainDays(null); // 永久有效
+                        schoolInfo.setRemainDays(null);
                     } else {
-                        LocalDateTime now = LocalDateTime.now();
                         LocalDateTime expireTime = school.getExpireTime();
                         if (now.isAfter(expireTime)) {
-                            schoolInfo.setRemainDays(0); // 已过期
+                            schoolInfo.setRemainDays(0);
                         } else {
-                            // 计算剩余天数
                             long remainDays = ChronoUnit.DAYS.between(now, expireTime);
                             schoolInfo.setRemainDays((int) remainDays);
                         }
                     }
-
                 }
                 schoolAndUserInfoList.add(schoolInfo);
             }
