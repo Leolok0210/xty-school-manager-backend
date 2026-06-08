@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -57,6 +58,23 @@ public class AiChatServiceImpl implements AiChatService {
 
     private String systemPrompt;
 
+    private final Map<String, AgentLoopState> pendingAgentStates = new ConcurrentHashMap<>();
+
+    private static final int MAX_AGENT_ITERATIONS = 10;
+
+    /**
+     * Holds the state of an in-progress agent loop that was paused for write confirmation.
+     */
+    private static class AgentLoopState {
+        private List<JSONObject> messages;
+        private String pendingFunctionName;
+        private Map<String, Object> pendingArguments;
+        private String toolCallId;
+        private Long schoolId;
+        private String sessionId;
+        private AiChatResModel accumulatedResponse;
+    }
+
     @PostConstruct
     public void init() {
         try {
@@ -74,13 +92,15 @@ public class AiChatServiceImpl implements AiChatService {
     public AiChatResModel chat(AiChatReqModel reqModel) {
         try {
             Long userId = getCurrentUserId();
-            // 優先使用請求中的schoolId，否則從session獲取
             Long schoolId = reqModel.getSchoolId() != null ? reqModel.getSchoolId() : getCurrentSchoolId();
 
             // 生成會話ID（如果沒有）
             if (reqModel.getSessionId() == null || reqModel.getSessionId().isEmpty()) {
                 reqModel.setSessionId(UUID.randomUUID().toString().replace("-", ""));
             }
+
+            // 清理该会话的旧 pending state（用户发了新消息，旧的确认就过期了）
+            pendingAgentStates.remove(reqModel.getSessionId());
 
             // 嘗試保存用戶消息（如果數據庫表不存在則跳過）
             try {
@@ -89,49 +109,49 @@ public class AiChatServiceImpl implements AiChatService {
                 log.debug("Failed to save user message, skipping (table may not exist): {}", e.getMessage());
             }
 
-            // 构建请求
-            JSONObject qwenRequest = buildQwenRequest(reqModel, schoolId);
-            String response = callQwenApiWithRetry(qwenRequest, 3);
+            // 構建初始消息列表
+            List<JSONObject> messages = buildInitialMessages(reqModel, schoolId);
 
-            log.info("Qwen API response: {}", response);
-            JSONObject qwenResponse = JSON.parseObject(response);
-            AiChatResModel resModel = parseQwenResponse(qwenResponse, reqModel);
+            // 執行 Agent Loop
+            AiChatResModel resModel = runAgentLoop(messages, schoolId, reqModel.getSessionId());
 
-            // 嘗試保存AI回复（如果數據庫表不存在則跳過）
-            try {
-                aiChatSessionService.saveMessage(reqModel.getSessionId(), "assistant", resModel.getContent());
-            } catch (Exception e) {
-                log.debug("Failed to save assistant message, skipping (table may not exist): {}", e.getMessage());
-            }
+            // 只有非確認狀態才保存 assistant 消息和觸發學習
+            if (!Boolean.TRUE.equals(resModel.getRequiresConfirmation())) {
+                try {
+                    if (resModel.getContent() != null && !resModel.getContent().isEmpty()) {
+                        aiChatSessionService.saveMessage(reqModel.getSessionId(), "assistant", resModel.getContent());
+                    }
+                } catch (Exception e) {
+                    log.debug("Failed to save assistant message, skipping (table may not exist): {}", e.getMessage());
+                }
 
-            // 觸發學習（記錄對話到學習系統）
-            try {
-                if (reqModel.getMessages() != null && !reqModel.getMessages().isEmpty()) {
-                    List<AiChatReqModel.ChatMessage> msgs = reqModel.getMessages();
-                    AiChatReqModel.ChatMessage lastMsg = msgs.get(msgs.size() - 1);
-                    if ("user".equals(lastMsg.getRole())) {
-                        aiLearningService.learnFromConversation(
-                            reqModel.getSessionId(),
-                            lastMsg.getContent(),
-                            resModel.getContent(),
-                            schoolId
-                        );
+                // 觸發學習
+                try {
+                    if (reqModel.getMessages() != null && !reqModel.getMessages().isEmpty()) {
+                        List<AiChatReqModel.ChatMessage> msgs = reqModel.getMessages();
+                        AiChatReqModel.ChatMessage lastMsg = msgs.get(msgs.size() - 1);
+                        if ("user".equals(lastMsg.getRole())) {
+                            aiLearningService.learnFromConversation(
+                                reqModel.getSessionId(),
+                                lastMsg.getContent(),
+                                resModel.getContent(),
+                                schoolId
+                            );
 
-                        // 更新用戶習慣（即使是匿名用戶也追蹤）
-                        try {
-                            if (userId == null || userId <= 0) {
-                                userId = 0L; // 匿名用戶
+                            try {
+                                Long uid = (userId == null || userId <= 0) ? 0L : userId;
+                                userHabitService.updateHabit(uid, schoolId, lastMsg.getContent());
+                            } catch (Exception e) {
+                                log.debug("Failed to update user habit, skipping: {}", e.getMessage());
                             }
-                            userHabitService.updateHabit(userId, schoolId, lastMsg.getContent());
-                        } catch (Exception e) {
-                            log.debug("Failed to update user habit, skipping: {}", e.getMessage());
                         }
                     }
+                } catch (Exception e) {
+                    log.debug("Failed to learn from conversation, skipping: {}", e.getMessage());
                 }
-            } catch (Exception e) {
-                log.debug("Failed to learn from conversation, skipping: {}", e.getMessage());
             }
 
+            resModel.setSessionId(reqModel.getSessionId());
             return resModel;
         } catch (Exception e) {
             log.error("AI chat error", e);
@@ -141,25 +161,71 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-@Override
+    @Override
     public AiChatResModel executeAction(String sessionId, String actionId, Object params) {
-        AiChatResModel resModel = new AiChatResModel();
         try {
             AiContext context = AiContext.of(getCurrentUserId(), getCurrentSchoolId(), "teacher");
 
             AiSkill skill = skillRegistry.get(actionId);
             if (skill == null) {
-                resModel.setContent("未知操作：" + actionId);
-                return resModel;
+                AiChatResModel res = new AiChatResModel();
+                res.setContent("未知操作：" + actionId);
+                return res;
             }
 
-            // 記錄操作審計日誌
             log.info("AI executeAction - userId: {}, schoolId: {}, action: {}, params: {}",
                 getCurrentUserId(), context.getSchoolId(), actionId, params);
 
             JSONObject arguments = JSON.parseObject(JSON.toJSONString(params));
             SkillResult result = skill.execute(arguments, context);
 
+            // 檢查是否有暫停的 Agent Loop 需要恢復
+            AgentLoopState pendingState = pendingAgentStates.remove(sessionId);
+            if (pendingState != null) {
+                log.info("Resuming agent loop after confirmation for session {}", sessionId);
+
+                List<JSONObject> messages = pendingState.messages;
+
+                // 重建 assistant message（含 tool_calls）
+                JSONObject assistantMsg = new JSONObject();
+                assistantMsg.put("role", "assistant");
+                assistantMsg.put("content", (String) null);
+                JSONArray toolCalls = new JSONArray();
+                JSONObject tc = new JSONObject();
+                tc.put("id", pendingState.toolCallId);
+                tc.put("type", "function");
+                JSONObject func = new JSONObject();
+                func.put("name", pendingState.pendingFunctionName);
+                func.put("arguments", JSON.toJSONString(pendingState.pendingArguments));
+                tc.put("function", func);
+                toolCalls.add(tc);
+                assistantMsg.put("tool_calls", toolCalls);
+                messages.add(assistantMsg);
+
+                // 添加 tool result（已確認執行的結果）
+                String toolContent = result.getMessage() != null ? result.getMessage() : "操作已執行完成";
+                messages.add(buildToolResultMessage(pendingState.toolCallId, toolContent));
+
+                // 累積 data cards
+                AiChatResModel accumulated = pendingState.accumulatedResponse;
+                if (result.getDataCards() != null && !result.getDataCards().isEmpty()) {
+                    List<AiChatResModel.DataCard> cards = convertToDataCards(result.getDataCards(), actionId);
+                    if (accumulated.getDataCards() == null) {
+                        accumulated.setDataCards(new ArrayList<>());
+                    }
+                    accumulated.getDataCards().addAll(cards);
+                }
+                // 清除確認狀態
+                accumulated.setRequiresConfirmation(false);
+                accumulated.setActionType(null);
+                accumulated.setActionDescription(null);
+                accumulated.setPendingAction(null);
+
+                // 恢復 Agent Loop
+                return runAgentLoop(messages, pendingState.schoolId, sessionId);
+            }
+
+            // 無 pending state — 獨立執行（legacy 行為）
             StringBuilder sb = new StringBuilder();
             if (result.getMessage() != null && !result.getMessage().isEmpty()) {
                 sb.append(result.getMessage());
@@ -167,17 +233,19 @@ public class AiChatServiceImpl implements AiChatService {
                 sb.append("操作已執行完成");
             }
 
+            AiChatResModel resModel = new AiChatResModel();
             if (result.getDataCards() != null && !result.getDataCards().isEmpty()) {
                 List<AiChatResModel.DataCard> cards = convertToDataCards(result.getDataCards(), actionId);
                 resModel.setDataCards(cards);
             }
-
             resModel.setContent(sb.toString());
+            return resModel;
         } catch (Exception e) {
             log.error("executeAction error", e);
+            AiChatResModel resModel = new AiChatResModel();
             resModel.setContent("操作執行失敗：" + e.getMessage());
+            return resModel;
         }
-        return resModel;
     }
 
     @Override
@@ -255,7 +323,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-private Long getCurrentSchoolId() {
+    private Long getCurrentSchoolId() {
         try {
             Object schoolIdObj = StpUtil.getSession().get("schoolId");
             if (schoolIdObj != null) {
@@ -267,10 +335,8 @@ private Long getCurrentSchoolId() {
         return null;
     }
 
-    private JSONObject buildQwenRequest(AiChatReqModel reqModel, Long schoolId) {
-        JSONObject request = new JSONObject();
-
-        // 构建知识库上下文（如果数据库表不存在则返回空）
+    private List<JSONObject> buildInitialMessages(AiChatReqModel reqModel, Long schoolId) {
+        // 构建知识库上下文
         String knowledgeContext = "";
         try {
             knowledgeContext = aiKnowledgeBaseService.getKnowledgeContext(schoolId);
@@ -309,14 +375,14 @@ private Long getCurrentSchoolId() {
 
         String fullSystemPrompt = systemPrompt + "\n\n" + schoolContext + userHabitContext + knowledgeContext;
 
-        JSONArray messages = new JSONArray();
+        List<JSONObject> messages = new ArrayList<>();
 
         JSONObject systemMsg = new JSONObject();
         systemMsg.put("role", "system");
         systemMsg.put("content", fullSystemPrompt);
         messages.add(systemMsg);
 
-        // 添加历史消息（如果数据库表不存在则跳过）
+        // 添加历史消息（只加载 user 和 assistant，不加载 tool 消息）
         if (reqModel.getSessionId() != null && !reqModel.getSessionId().isEmpty()) {
             try {
                 List<AiChatMessageEntity> history = aiChatSessionService.getSessionMessages(reqModel.getSessionId());
@@ -341,187 +407,176 @@ private Long getCurrentSchoolId() {
             }
         }
 
+        return messages;
+    }
+
+    private JSONObject buildAgentRequest(List<JSONObject> messages) {
+        JSONObject request = new JSONObject();
         request.put("model", aiConfig.getModel());
-        request.put("messages", messages);
+        request.put("messages", new com.alibaba.fastjson.JSONArray(messages));
         request.put("tools", JSON.parseArray(JSON.toJSONString(skillRegistry.getToolDefinitions())));
         request.put("tool_choice", "auto");
-
         return request;
     }
 
-    private AiChatResModel parseQwenResponse(JSONObject qwenResponse, AiChatReqModel reqModel) {
-        AiChatResModel resModel = new AiChatResModel();
+    private JSONObject buildToolResultMessage(String toolCallId, String content) {
+        JSONObject msg = new JSONObject();
+        msg.put("role", "tool");
+        msg.put("tool_call_id", toolCallId);
+        msg.put("content", content);
+        return msg;
+    }
 
-        JSONArray choices = qwenResponse.getJSONArray("choices");
-        if (choices != null && !choices.isEmpty()) {
-            JSONObject message = choices.getJSONObject(0).getJSONObject("message");
+    private JSONObject buildToolErrorMessage(String toolCallId, String error) {
+        JSONObject msg = new JSONObject();
+        msg.put("role", "tool");
+        msg.put("tool_call_id", toolCallId);
+        msg.put("content", "Error: " + error);
+        return msg;
+    }
+
+    private AiChatResModel runAgentLoop(List<JSONObject> messages, Long schoolId, String sessionId) {
+        AiChatResModel accumulated = new AiChatResModel();
+        accumulated.setContent("");
+
+        int iteration = 0;
+        while (iteration < MAX_AGENT_ITERATIONS) {
+            iteration++;
+            log.info("Agent loop iteration {}/{} for session {}", iteration, MAX_AGENT_ITERATIONS, sessionId);
+
+            // 1. 構建請求並調用 API
+            JSONObject request = buildAgentRequest(messages);
+            String responseBody;
+            try {
+                responseBody = callQwenApiWithRetry(request, 3);
+            } catch (Exception e) {
+                log.error("API call failed on iteration {}: {}", iteration, e.getMessage());
+                accumulated.setContent("抱歉，AI 服務暫時不可用，請稍後再試。");
+                pendingAgentStates.remove(sessionId);
+                return accumulated;
+            }
+
+            log.info("Agent API response (iteration {}): {}", iteration, responseBody);
+            JSONObject qwenResponse = JSON.parseObject(responseBody);
+            JSONArray choices = qwenResponse.getJSONArray("choices");
+            if (choices == null || choices.isEmpty()) {
+                log.error("Empty choices in API response, iteration {}", iteration);
+                accumulated.setContent("抱歉，AI 返回了空結果，請重新提問。");
+                pendingAgentStates.remove(sessionId);
+                return accumulated;
+            }
+
+            JSONObject choice = choices.getJSONObject(0);
+            JSONObject message = choice.getJSONObject("message");
             String content = message.getString("content");
-            resModel.setContent(content != null ? content : "");
-
             JSONArray toolCalls = message.getJSONArray("tool_calls");
-            if (toolCalls != null && !toolCalls.isEmpty()) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(content != null ? content : "");
 
-                for (int i = 0; i < toolCalls.size(); i++) {
-                    JSONObject toolCall = toolCalls.getJSONObject(i);
-                    JSONObject function = toolCall.getJSONObject("function");
-                    String functionName = function.getString("name");
-                    JSONObject arguments = JSON.parseObject(function.getString("arguments"));
-
-                    AiContext context = AiContext.of(getCurrentUserId(), getCurrentSchoolId(), "teacher");
-                    // 如果 schoolId 為 0，使用預設值 1
-                    if (context.getSchoolId() == null || context.getSchoolId() == 0L) {
-                        log.warn("schoolId unavailable for user {}, falling back to 0 (no data)", context.getUserId());
-                        context.setSchoolId(0L);
-                    }
-
-                    // 如果調用了 query_classes 並帶有 className，自動查詢該班學生
-                    if ("query_classes".equals(functionName)) {
-                        String className = arguments.getString("className");
-                        AiSkill classSkill = skillRegistry.get("query_classes");
-                        if (classSkill != null) {
-                            SkillResult classResult = classSkill.execute(arguments, context);
-                            if (classResult.getMessage() != null && !classResult.getMessage().isEmpty()) {
-                                sb.append("\n\n").append(classResult.getMessage());
-                            }
-                            if (classResult.getDataCards() != null && !classResult.getDataCards().isEmpty()) {
-                                List<AiChatResModel.DataCard> cards = convertToDataCards(classResult.getDataCards(), functionName);
-                                resModel.setDataCards(cards);
-                            }
-                        }
-                        // 自動查詢該班學生
-                        if (className != null && !className.isEmpty()) {
-                            AiSkill studentSkill = skillRegistry.get("query_students");
-                            if (studentSkill != null) {
-                                JSONObject studentArgs = new JSONObject();
-                                studentArgs.put("className", className);
-                                studentArgs.put("schoolId", context.getSchoolId());
-                                SkillResult studentResult = studentSkill.execute(studentArgs, context);
-                                if (studentResult.getMessage() != null && !studentResult.getMessage().isEmpty()) {
-                                    sb.append("\n\n").append(studentResult.getMessage());
-                                }
-                                if (studentResult.getDataCards() != null && !studentResult.getDataCards().isEmpty()) {
-                                    List<AiChatResModel.DataCard> studentCards = convertToDataCards(studentResult.getDataCards(), "query_students");
-                                    if (resModel.getDataCards() == null) {
-                                        resModel.setDataCards(studentCards);
-                                    } else {
-                                        resModel.getDataCards().addAll(studentCards);
-                                    }
-                                }
-                                // 檢查用戶是否詢問成績，如果是則自動查詢成績
-                                boolean isGradeQuery = isGradeRelatedQuery(reqModel);
-                                if (isGradeQuery) {
-                                    // 從學生結果中提取學生ID
-                                    List<Long> studentIds = extractStudentIdsFromResult(studentResult);
-                                    if (!studentIds.isEmpty()) {
-                                        AiSkill gradeSkill = skillRegistry.get("check_semester_grades");
-                                        if (gradeSkill != null) {
-                                            for (Long studentId : studentIds) {
-                                                JSONObject gradeArgs = new JSONObject();
-                                                gradeArgs.put("studentId", studentId);
-                                                SkillResult gradeResult = gradeSkill.execute(gradeArgs, context);
-                                                if (gradeResult.getMessage() != null && !gradeResult.getMessage().isEmpty()) {
-                                                    sb.append("\n\n").append(gradeResult.getMessage());
-                                                }
-                                                if (gradeResult.getDataCards() != null && !gradeResult.getDataCards().isEmpty()) {
-                                                    List<AiChatResModel.DataCard> gradeCards = convertToDataCards(gradeResult.getDataCards(), "check_semester_grades");
-                                                    if (resModel.getDataCards() == null) {
-                                                        resModel.setDataCards(gradeCards);
-                                                    } else {
-                                                        resModel.getDataCards().addAll(gradeCards);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        resModel.setContent(sb.toString());
-                        continue;
-                    }
-
-                    if (functionName.startsWith("add_") || functionName.startsWith("update_") || functionName.startsWith("delete_") || functionName.startsWith("register_") || functionName.startsWith("import_")) {
-                        resModel.setRequiresConfirmation(true);
-                        resModel.setActionType("execute");
-                        resModel.setActionDescription("即將執行: " + functionName);
-
-                        Map<String, Object> pendingAction = new HashMap<>();
-                        pendingAction.put("functionName", functionName);
-                        pendingAction.put("arguments", arguments);
-                        resModel.setPendingAction(pendingAction);
-                    } else {
-                        AiSkill skill = skillRegistry.get(functionName);
-                        if (skill != null) {
-                            SkillResult result = skill.execute(arguments, context);
-                            // 只顯示格式化消息，不輸出原始 JSON 數據
-                            if (result.getMessage() != null && !result.getMessage().isEmpty()) {
-                                sb.append("\n\n").append(result.getMessage());
-                            }
-
-                            if (result.getDataCards() != null && !result.getDataCards().isEmpty()) {
-                                List<AiChatResModel.DataCard> cards = convertToDataCards(result.getDataCards(), functionName);
-                                resModel.setDataCards(cards);
-                            }
-
-                            // 如果是 query_students 且用戶詢問成績，自動查詢成績
-                            if ("query_students".equals(functionName) && isGradeRelatedQuery(reqModel)) {
-                                List<Long> studentIds = extractStudentIdsFromResult(result);
-                                if (!studentIds.isEmpty()) {
-                                    for (Long studentId : studentIds) {
-                                        // 查詢學期成績
-                                        AiSkill gradeSkill = skillRegistry.get("check_semester_grades");
-                                        if (gradeSkill != null) {
-                                            JSONObject gradeArgs = new JSONObject();
-                                            gradeArgs.put("studentId", studentId);
-                                            SkillResult gradeResult = gradeSkill.execute(gradeArgs, context);
-                                            if (gradeResult.getMessage() != null && !gradeResult.getMessage().isEmpty()) {
-                                                sb.append("\n\n").append(gradeResult.getMessage());
-                                            }
-                                            if (gradeResult.getDataCards() != null && !gradeResult.getDataCards().isEmpty()) {
-                                                List<AiChatResModel.DataCard> gradeCards = convertToDataCards(gradeResult.getDataCards(), "check_semester_grades");
-                                                if (resModel.getDataCards() == null) {
-                                                    resModel.setDataCards(gradeCards);
-                                                } else {
-                                                    resModel.getDataCards().addAll(gradeCards);
-                                                }
-                                            }
-                                        }
-                                        // 查詢日常成績
-                                        AiSkill dailySkill = skillRegistry.get("query_daily_grades");
-                                        if (dailySkill != null) {
-                                            JSONObject dailyArgs = new JSONObject();
-                                            dailyArgs.put("studentId", studentId);
-                                            SkillResult dailyResult = dailySkill.execute(dailyArgs, context);
-                                            if (dailyResult.getMessage() != null && !dailyResult.getMessage().isEmpty()) {
-                                                sb.append("\n\n").append(dailyResult.getMessage());
-                                            }
-                                            if (dailyResult.getDataCards() != null && !dailyResult.getDataCards().isEmpty()) {
-                                                List<AiChatResModel.DataCard> dailyCards = convertToDataCards(dailyResult.getDataCards(), "query_daily_grades");
-                                                if (resModel.getDataCards() == null) {
-                                                    resModel.setDataCards(dailyCards);
-                                                } else {
-                                                    resModel.getDataCards().addAll(dailyCards);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            // 移除原始 JSON 輸出，避免洩露內部數據
-                        } else {
-                            // 未知技能，只顯示提示訊息，不顯示技能名稱
-                            sb.append("\n\n抱歉，暫時無法處理這個請求。");
-                        }
-                    }
+            // 2. 沒有 tool_calls → 最終答案
+            if (toolCalls == null || toolCalls.isEmpty()) {
+                if (content != null && !content.isEmpty()) {
+                    accumulated.setContent(content);
+                } else if (accumulated.getContent().isEmpty()) {
+                    accumulated.setContent("抱歉，我無法處理這個請求。");
                 }
-                resModel.setContent(sb.toString());
+                pendingAgentStates.remove(sessionId);
+                return accumulated;
+            }
+
+            // 3. 把 assistant message（含 tool_calls）加到消息列表
+            messages.add(message);
+
+            // 4. 執行每個 tool call
+            for (int i = 0; i < toolCalls.size(); i++) {
+                JSONObject toolCall = toolCalls.getJSONObject(i);
+                String toolCallId = toolCall.getString("id");
+                JSONObject function = toolCall.getJSONObject("function");
+                String functionName = function.getString("name");
+                JSONObject arguments;
+                try {
+                    arguments = JSON.parseObject(function.getString("arguments"));
+                } catch (Exception e) {
+                    log.warn("Failed to parse tool arguments for {}: {}", functionName, e.getMessage());
+                    arguments = new JSONObject();
+                }
+
+                AiSkill skill = skillRegistry.get(functionName);
+                if (skill == null) {
+                    messages.add(buildToolErrorMessage(toolCallId, "找不到工具: " + functionName));
+                    continue;
+                }
+
+                // 4a. 檢查是否需要確認（寫入操作）
+                boolean needsConfirm = skill.requiresConfirmation()
+                    || functionName.startsWith("add_")
+                    || functionName.startsWith("update_")
+                    || functionName.startsWith("delete_")
+                    || functionName.startsWith("register_")
+                    || functionName.startsWith("import_");
+
+                if (needsConfirm) {
+                    String preview = skill.getConfirmationPreview(arguments,
+                        AiContext.of(getCurrentUserId(), schoolId, "teacher"));
+                    if (preview == null || preview.isEmpty()) {
+                        preview = "即將執行: " + functionName;
+                    }
+
+                    accumulated.setRequiresConfirmation(true);
+                    accumulated.setActionType("execute");
+                    accumulated.setActionDescription(preview);
+
+                    Map<String, Object> pendingAction = new HashMap<>();
+                    pendingAction.put("functionName", functionName);
+                    pendingAction.put("arguments", arguments);
+                    accumulated.setPendingAction(pendingAction);
+
+                    // 存儲 agent loop state 以便確認後恢復
+                    AgentLoopState state = new AgentLoopState();
+                    state.messages = new ArrayList<>(messages);
+                    // 移除剛加入的 assistant message（確認後會重建）
+                    state.messages.remove(state.messages.size() - 1);
+                    state.pendingFunctionName = functionName;
+                    state.pendingArguments = arguments;
+                    state.toolCallId = toolCallId;
+                    state.schoolId = schoolId;
+                    state.sessionId = sessionId;
+                    state.accumulatedResponse = accumulated;
+                    pendingAgentStates.put(sessionId, state);
+
+                    log.info("Agent loop paused for confirmation: {} in session {}", functionName, sessionId);
+                    return accumulated;
+                }
+
+                // 4b. 執行 skill
+                AiContext context = AiContext.of(getCurrentUserId(), schoolId, "teacher");
+                if (context.getSchoolId() == null || context.getSchoolId() == 0L) {
+                    context.setSchoolId(0L);
+                }
+
+                SkillResult result = skill.execute(arguments, context);
+
+                // 4c. 累積 data cards
+                if (result.getDataCards() != null && !result.getDataCards().isEmpty()) {
+                    List<AiChatResModel.DataCard> cards = convertToDataCards(result.getDataCards(), functionName);
+                    if (accumulated.getDataCards() == null) {
+                        accumulated.setDataCards(new ArrayList<>());
+                    }
+                    accumulated.getDataCards().addAll(cards);
+                }
+
+                // 4d. 添加 tool result 消息
+                String toolContent = result.getMessage() != null ? result.getMessage()
+                    : (result.isSuccess() ? "執行成功" : "執行失敗");
+                messages.add(buildToolResultMessage(toolCallId, toolContent));
             }
         }
 
-        resModel.setSessionId(reqModel.getSessionId());
-        return resModel;
+        // 超過最大迭代次數
+        log.warn("Agent loop exceeded max iterations ({}) for session {}", MAX_AGENT_ITERATIONS, sessionId);
+        pendingAgentStates.remove(sessionId);
+        if (accumulated.getContent().isEmpty()) {
+            accumulated.setContent("抱歉，處理過程需要較多步驟，請簡化您的問題後重新提問。");
+        }
+        return accumulated;
     }
 
     private List<AiChatResModel.DataCard> convertToDataCards(List<Map<String, Object>> dataCards, String skillName) {
@@ -557,48 +612,6 @@ private Long getCurrentSchoolId() {
         List<AiChatResModel.DataCard> result = new ArrayList<>();
         result.add(card);
         return result;
-    }
-
-    private boolean isGradeRelatedQuery(AiChatReqModel reqModel) {
-        if (reqModel.getMessages() == null || reqModel.getMessages().isEmpty()) {
-            return false;
-        }
-        // 檢查最後一條用戶消息是否包含成績相關關鍵詞
-        for (int i = reqModel.getMessages().size() - 1; i >= 0; i--) {
-            AiChatReqModel.ChatMessage msg = reqModel.getMessages().get(i);
-            if ("user".equals(msg.getRole())) {
-                String content = msg.getContent().toLowerCase();
-                return content.contains("成績") || content.contains("分數") ||
-                       content.contains("物理") || content.contains("數學") ||
-                       content.contains("英文") || content.contains("中文") ||
-                       content.contains("化學") || content.contains("生物") ||
-                       content.contains("歷史") || content.contains("地理") ||
-                       content.contains("科目") || content.contains("所有") ||
-                       content.contains("查詢");
-            }
-        }
-        return false;
-    }
-
-    private List<Long> extractStudentIdsFromResult(SkillResult studentResult) {
-        List<Long> studentIds = new ArrayList<>();
-        if (studentResult.getDataCards() != null) {
-            for (Map<String, Object> card : studentResult.getDataCards()) {
-                Object idObj = card.get("id");
-                if (idObj != null) {
-                    if (idObj instanceof Long) {
-                        studentIds.add((Long) idObj);
-                    } else if (idObj instanceof Integer) {
-                        studentIds.add(((Integer) idObj).longValue());
-                    } else if (idObj instanceof String) {
-                        try {
-                            studentIds.add(Long.parseLong((String) idObj));
-                        } catch (NumberFormatException ignored) {}
-                    }
-                }
-            }
-        }
-        return studentIds;
     }
 
     private String getCardTitle(String skillName) {
