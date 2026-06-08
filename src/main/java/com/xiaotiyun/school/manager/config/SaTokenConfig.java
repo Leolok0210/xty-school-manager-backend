@@ -18,19 +18,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
             return;
         }
 
-        // 1. 全局登錄攔截器：除 @SaIgnore 外，所有請求必須登錄
-        registry.addInterceptor(new GlobalLoginInterceptor())
-                .addPathPatterns("/**")
-                .excludePathPatterns("/doc.html",
-                        "/webjars/**",
-                        "/swagger-resources/**",
-                        "/favicon.ico",
-                        "/health/check",
-                        "/api/transcript/details/class",
-                        "/v2/api-docs/**",
-                        "/v3/api-docs/**");
-
-        // 2. Sa-Token 攔截器：處理 @SaCheckPermission / @SaCheckRole 等註解
+        // 處理 @SaCheckPermission / @SaCheckRole 等註解
         registry.addInterceptor(new SaInterceptor())
                 .addPathPatterns("/**")
                 .excludePathPatterns("/doc.html",
