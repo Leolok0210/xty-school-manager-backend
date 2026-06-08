@@ -1,10 +1,10 @@
 package com.xiaotiyun.school.manager.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
+import cn.dev33.satoken.annotation.SaIgnore;
 import com.xiaotiyun.school.manager.basic.common.BasicController;
 import com.xiaotiyun.school.manager.basic.common.Result;
+import com.xiaotiyun.school.manager.mapper.AiReportMapper;
 import com.xiaotiyun.school.manager.model.entity.AiReportEntity;
-import com.xiaotiyun.school.manager.model.entity.UserEntity;
 import com.xiaotiyun.school.manager.service.ReportService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -27,6 +27,9 @@ public class ReportController extends BasicController {
     @Resource
     private ReportService reportService;
 
+    @Resource
+    private AiReportMapper aiReportMapper;
+
     @GetMapping("/list")
     @ApiOperation("獲取我的報表列表")
     public Result<List<AiReportEntity>> getMyReports() {
@@ -36,14 +39,11 @@ public class ReportController extends BasicController {
         return Result.success(reports);
     }
 
+    @SaIgnore
     @GetMapping("/download/{reportId}")
     @ApiOperation("下載報表")
     public void downloadReport(@PathVariable Long reportId, HttpServletResponse response) {
-        AiReportEntity report = reportService.getUserReports(null, null).stream()
-            .filter(r -> r.getId().equals(reportId))
-            .findFirst()
-            .orElse(null);
-
+        AiReportEntity report = aiReportMapper.selectById(reportId);
         if (report == null || report.getFilePath() == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return;
