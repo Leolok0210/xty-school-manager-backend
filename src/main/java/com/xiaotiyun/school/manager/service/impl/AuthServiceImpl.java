@@ -20,7 +20,8 @@ import com.xiaotiyun.school.manager.service.AuthService;
 import com.xiaotiyun.school.manager.service.MenuService;
 import com.xiaotiyun.school.manager.service.UserGroupService;
 import com.xiaotiyun.school.manager.service.UserService;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -33,9 +34,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     @Resource
     private UserDao userDao;
@@ -95,19 +97,17 @@ public class AuthServiceImpl implements AuthService {
 
         // 生成token
         StpUtil.login(user.getId());
-        // 保存用户信息（清除密码字段以减小session内存占用）
-        user.setPassword(null);
+        // 保存用户信息
         StpUtil.getSession().set("userInfo", user);
 
         try {
             return getUserLoginData(user);
         } catch (Exception e) {
-            // 登录数据加载失败时，返回最小化响应而不是crash
-            log.warn("加载用户登录数据失败，返回最小化响应: userId={}, error={}", user.getId(), e.getMessage(), e);
-            LoginResModel resModel = new LoginResModel();
-            resModel.setToken(StpUtil.getTokenValue());
-            resModel.setNeedResetPwd(user.getNeedResetPwd());
-            return resModel;
+            log.warn("加载用户登录数据失败: userId={}", user.getId(), e);
+            LoginResModel fallback = new LoginResModel();
+            fallback.setToken(StpUtil.getTokenValue());
+            fallback.setNeedResetPwd(user.getNeedResetPwd());
+            return fallback;
         }
     }
 
