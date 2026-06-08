@@ -106,7 +106,7 @@ public class AiChatServiceImpl implements AiChatService {
             try {
                 saveUserMessage(reqModel);
             } catch (Exception e) {
-                log.debug("Failed to save user message, skipping (table may not exist): {}", e.getMessage());
+                log.warn("Failed to save user message: {}", e.getMessage());
             }
 
             // 構建初始消息列表
@@ -122,7 +122,7 @@ public class AiChatServiceImpl implements AiChatService {
                         aiChatSessionService.saveMessage(reqModel.getSessionId(), "assistant", resModel.getContent());
                     }
                 } catch (Exception e) {
-                    log.debug("Failed to save assistant message, skipping (table may not exist): {}", e.getMessage());
+                    log.warn("Failed to save assistant message: {}", e.getMessage());
                 }
 
                 // 觸發學習
