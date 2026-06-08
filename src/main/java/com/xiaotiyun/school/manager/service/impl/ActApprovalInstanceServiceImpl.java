@@ -637,11 +637,23 @@ public class ActApprovalInstanceServiceImpl extends ServiceImpl<ActApprovalInsta
                     // 根据层级查询多级主管
                     Integer level = approverConfig.getInteger("level");
                     if (deptId != null && level != null && level > 1) {
+                        // 预先收集所有需要的部门ID，然后批量查询，避免N+1
+                        List<Long> deptIdsToFetch = new ArrayList<>();
+                        Long cursorId = deptId;
+                        for (int i = 0; i < level && cursorId != null && cursorId != 0; i++) {
+                            deptIdsToFetch.add(cursorId);
+                            DeptEntity tempDept = deptService.getById(cursorId);
+                            if (tempDept == null) break;
+                            cursorId = tempDept.getParentId();
+                        }
+                        Map<Long, DeptEntity> deptMap = deptService.listByIds(deptIdsToFetch)
+                                .stream().collect(Collectors.toMap(DeptEntity::getId, d -> d));
+
                         Long currentDeptId = deptId;
                         // 逐级向上查询主管
                         for (int i = 0; i < level; i++) {
-                            // 1. 获取当前部门信息
-                            DeptEntity dept = deptService.getById(currentDeptId);
+                            // 1. 从批量查询结果中获取当前部门信息
+                            DeptEntity dept = deptMap.get(currentDeptId);
                             if (dept == null) {
                                 break;
                             }

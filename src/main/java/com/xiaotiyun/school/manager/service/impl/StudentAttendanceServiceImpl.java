@@ -835,17 +835,33 @@ public class StudentAttendanceServiceImpl extends ServiceImpl<StudentAttendanceD
                         .eq(SemesterEntity::getDeleted, 0);
                 List<SemesterEntity> semesterEntities = semesterService.list(wrapper);
                 if (CollectionUtils.isNotEmpty(semesterEntities)) {
+                    // 批量查询所有学期的考勤数据，避免N+1
+                    LambdaQueryWrapper<StudentAttendanceEntity> attendanceWrapper = new LambdaQueryWrapper<>();
+                    attendanceWrapper.eq(StudentAttendanceEntity::getStudentId, studentEntity.getId())
+                            .eq(StudentAttendanceEntity::getDeleted, 0);
+                    if (reqModel.getStatus() != null && reqModel.getStatus() >= 0) {
+                        attendanceWrapper.apply("FIND_IN_SET({0}, status)", reqModel.getStatus());
+                    }
+                    attendanceWrapper.and(w -> {
+                        SemesterEntity firstSem = semesterEntities.get(0);
+                        w.between(StudentAttendanceEntity::getAttendanceDate, firstSem.getStartTime().toLocalDate(), firstSem.getEndTime().toLocalDate());
+                        for (int i = 1; i < semesterEntities.size(); i++) {
+                            SemesterEntity sem = semesterEntities.get(i);
+                            w.or().between(StudentAttendanceEntity::getAttendanceDate, sem.getStartTime().toLocalDate(), sem.getEndTime().toLocalDate());
+                        }
+                    });
+                    List<StudentAttendanceEntity> allAttendanceRecords = this.list(attendanceWrapper);
+
                     for (SemesterEntity semesterEntity : semesterEntities) {
                         StudentAttendanceStatisticsResModel statisticsResModel = new StudentAttendanceStatisticsResModel();
                         statisticsResModel.setDepartment(semesterEntity.getDepartment());
                         statisticsResModel.setSemesterName(semesterEntity.getName());
-                        //查询考勤统计
-                        List<StudentLateCountResModel> countResModels = this.getBaseMapper().selectStudentAttendanceCount(studentEntity.getId(), reqModel.getStatus(), semesterEntity.getStartTime().toLocalDate(), semesterEntity.getEndTime().toLocalDate());
-                        if (CollectionUtils.isNotEmpty(countResModels)) {
-                            statisticsResModel.setCount(countResModels.get(0).getLateCount());
-                        } else {
-                            statisticsResModel.setCount(0);
-                        }
+                        LocalDate startDate = semesterEntity.getStartTime().toLocalDate();
+                        LocalDate endDate = semesterEntity.getEndTime().toLocalDate();
+                        long count = allAttendanceRecords.stream()
+                                .filter(r -> !r.getAttendanceDate().isBefore(startDate) && !r.getAttendanceDate().isAfter(endDate))
+                                .count();
+                        statisticsResModel.setCount((int) count);
                         result.add(statisticsResModel);
                     }
                 }

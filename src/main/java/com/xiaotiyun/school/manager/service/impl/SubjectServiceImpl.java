@@ -86,12 +86,16 @@ public class SubjectServiceImpl extends ServiceImpl<SubjectDao, Subject> impleme
         }
 
         //同一个学部下的"科目名称"不可重复
-        //使用for
+        //批量查询所有同名科目，避免N+1
+        Set<String> subjectNames = subjects.stream().map(Subject::getSubjectName).collect(Collectors.toSet());
+        Map<String, List<Subject>> existingByName = subjectDao.selectList(new LambdaQueryWrapper<Subject>()
+                .eq(Subject::getDeleted, 0)
+                .eq(Subject::getSchoolId, subjects.get(0).getSchoolId())
+                .in(Subject::getSubjectName, subjectNames))
+                .stream()
+                .collect(Collectors.groupingBy(Subject::getSubjectName));
         for(Subject subject : subjects) {
-            List<Subject> sameNameList = subjectDao.selectList(new LambdaQueryWrapper<Subject>()
-                    .eq(Subject::getDeleted,0)
-                    .eq(Subject::getSchoolId,subject.getSchoolId())
-                    .eq(Subject::getSubjectName, subject.getSubjectName()));
+            List<Subject> sameNameList = existingByName.get(subject.getSubjectName());
             if(!CollectionUtils.isEmpty(sameNameList)) {
                 Set<String> currentScope = parseScope(subject.getScope());
                 for(Subject exist : sameNameList) {

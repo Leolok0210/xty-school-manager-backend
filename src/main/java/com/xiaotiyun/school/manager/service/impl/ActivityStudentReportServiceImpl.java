@@ -631,6 +631,11 @@ public class ActivityStudentReportServiceImpl extends ServiceImpl<ActivityStuden
                     // 批量插入操作记录
                     List<LeisureCourseOpRecordEntity> opRecords = new ArrayList<>();
 
+                    // 批量获取所有学生信息，避免N+1
+                    Set<Long> studentIds = records.stream().map(ActivityStudentReportEntity::getStudentId).collect(Collectors.toSet());
+                    Map<Long, StudentEntity> studentMap = CollectionUtils.isEmpty(studentIds) ? Collections.emptyMap()
+                            : studentService.listByIds(studentIds).stream().collect(Collectors.toMap(StudentEntity::getId, s -> s));
+
                     for (ActivityStudentReportEntity record : records) {
                         LeisureCourseOpRecordEntity opRecord = new LeisureCourseOpRecordEntity();
                         opRecord.setSchoolId(activityRecord.getSchoolId());
@@ -638,7 +643,7 @@ public class ActivityStudentReportServiceImpl extends ServiceImpl<ActivityStuden
                         opRecord.setStudentId(record.getStudentId());
 
                         // 获取学生姓名
-                        StudentEntity student = studentService.getById(record.getStudentId());
+                        StudentEntity student = studentMap.get(record.getStudentId());
                         if (student != null) {
                             opRecord.setStudentName(student.getChineseName());
                         }
@@ -715,15 +720,29 @@ public class ActivityStudentReportServiceImpl extends ServiceImpl<ActivityStuden
         if (!CollectionUtils.isEmpty(activityRecordEntities)) {
             activityRecordMap = activityRecordEntities.stream().collect(Collectors.toMap(LeisureActivityRecordEntity::getId, activityRecord -> activityRecord));
         }
+        // 批量检查所有学生是否已有匹配数据，避免N+1
+        LambdaQueryWrapper<ActivityStudentReportEntity> batchExistingQuery = new LambdaQueryWrapper<>();
+        batchExistingQuery.eq(ActivityStudentReportEntity::getDeleted, 0L)
+                .and(wrapper -> {
+                    ActivityStudentReportTransferReqModel first = reqModelList.get(0);
+                    wrapper.eq(ActivityStudentReportEntity::getStudentId, first.getStudentId())
+                           .eq(ActivityStudentReportEntity::getActivityId, first.getActivityId());
+                    for (int i = 1; i < reqModelList.size(); i++) {
+                        ActivityStudentReportTransferReqModel req = reqModelList.get(i);
+                        wrapper.or(sub -> sub
+                                .eq(ActivityStudentReportEntity::getStudentId, req.getStudentId())
+                                .eq(ActivityStudentReportEntity::getActivityId, req.getActivityId()));
+                    }
+                });
+        List<ActivityStudentReportEntity> allExistingRecords = this.list(batchExistingQuery);
+        Map<String, ActivityStudentReportEntity> existingRecordMap = allExistingRecords.stream()
+                .collect(Collectors.toMap(r -> r.getStudentId() + "_" + r.getActivityId(), r -> r, (a, b) -> a));
+
         for (ActivityStudentReportTransferReqModel reqModel : reqModelList) {
             try {
-                // 检查学生是否已有匹配数据
-                LambdaQueryWrapper<ActivityStudentReportEntity> existingQuery = new LambdaQueryWrapper<>();
-                existingQuery.eq(ActivityStudentReportEntity::getStudentId, reqModel.getStudentId())
-                        .eq(ActivityStudentReportEntity::getActivityId, reqModel.getActivityId())
-                        .eq(ActivityStudentReportEntity::getDeleted, 0L);
-
-                ActivityStudentReportEntity existingRecord = this.getOne(existingQuery);
+                // 从批量查询结果中获取已有匹配数据
+                String existingKey = reqModel.getStudentId() + "_" + reqModel.getActivityId();
+                ActivityStudentReportEntity existingRecord = existingRecordMap.get(existingKey);
 
                 // 如果已有匹配数据，检查是否为公布状态
                 ActivityStudentReportEntity newRecord = null;
