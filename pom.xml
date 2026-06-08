@@ -7,7 +7,7 @@
     <groupId>com.xiaotiyun</groupId>
     <artifactId>xty-school-manager</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <packaging>jar</packaging><!-- cachebust: force rebuild -->
+    <packaging>jar</packaging>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
