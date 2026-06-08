@@ -108,7 +108,7 @@
             AND ur.school_id = #{schoolId}
         </if>
         <if test="userId != null and userId > 0">
-            AND JSON_CONTAINS(task.approver_ids, <![CDATA['${userId}']]>, '$')
+            AND JSON_CONTAINS(task.approver_ids, <![CDATA['#{userId}']]>, '$')
         </if>
         <if test="reqModel.sid != null and reqModel.sid != ''">
             AND ur.sid = #{reqModel.sid}

@@ -23,24 +23,24 @@
         LEFT JOIN grade_group grade ON grade.id = tr.grade_group
         WHERE tr.deleted = 0
         <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
-            AND tr.school_id = ${reqModel.schoolId}
+            AND tr.school_id = #{reqModel.schoolId}
         </if>
         <if test="reqModel.schoolYear != null and reqModel.schoolYear != ''">
             AND tr.school_year = #{reqModel.schoolYear}
         </if>
         <if test="reqModel.gradeGroup != null and reqModel.gradeGroup > 0">
-            AND tr.grade_group = ${reqModel.gradeGroup}
+            AND tr.grade_group = #{reqModel.gradeGroup}
         </if>
         <if test="reqModel.classId != null and reqModel.classId > 0">
-            AND tr.class_id = ${reqModel.classId}
+            AND tr.class_id = #{reqModel.classId}
         </if>
         <if test="reqModel.department != null and reqModel.department > 0">
-            AND tr.department = ${reqModel.department}
+            AND tr.department = #{reqModel.department}
         </if>
         <if test="reqModel.classIds != null and reqModel.classIds.size() > 0">
             AND cla.id IN
             <foreach item="classId" collection="reqModel.classIds" separator="," open="(" close=")">
-                ${classId}
+                #{classId}
             </foreach>
         </if>
         ORDER BY tr.create_time desc

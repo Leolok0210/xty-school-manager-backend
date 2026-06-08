@@ -30,13 +30,13 @@
             (SELECT activity_id,COUNT(1) AS courseNum FROM leisure_activity_courses_record WHERE deleted = 0 GROUP BY activity_id)
                 lacr ON lacr.activity_id = lar.id
         WHERE lar.deleted = 0
-        AND lar.school_id = ${schoolId}
+        AND lar.school_id = #{schoolId}
         AND lar.school_year = #{schoolYear}
         <if test="department != null and department > 0">
-            AND lar.department = ${department}
+            AND lar.department = #{department}
         </if>
         <if test="semesterId != null and semesterId > 0">
-            AND lar.semester_id = ${semesterId}
+            AND lar.semester_id = #{semesterId}
         </if>
         <if test="name != null and name != ''">
             AND lar.name LIKE CONCAT('%', #{name}, '%')

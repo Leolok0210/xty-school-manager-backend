@@ -61,7 +61,7 @@
             AND stu.id_no = #{reqModel.idNo}
         </if>
         <if test="reqModel.department != null and reqModel.department > 0">
-            AND cla.department = ${reqModel.department}
+            AND cla.department = #{reqModel.department}
         </if>
         <if test="reqModel.permanentAddress != null and reqModel.permanentAddress != ''">
             AND stu.permanent_address LIKE CONCAT('%', #{reqModel.permanentAddress}, '%')

@@ -116,9 +116,9 @@
              LEFT JOIN `subject` s ON s.id = sr.subject_id AND s.deleted = 0
              LEFT JOIN `student_usually_type` ty on ty.id = task.type_id
         WHERE score.deleted = 0
-          AND score.student_id = ${reqModel.studentId}
+          AND score.student_id = #{reqModel.studentId}
           <if test="reqModel.semesterId != null and reqModel.semesterId > 0">
-              AND task.period_id = ${reqModel.semesterId}
+              AND task.period_id = #{reqModel.semesterId}
           </if>
           <if test="reqModel.startTime != null and reqModel.startTime != ''">
               AND task.test_date &gt;= #{reqModel.startTime}
@@ -127,13 +127,13 @@
               AND task.test_date &lt;= #{reqModel.endTime}
           </if>
           <if test="reqModel.subjectId != null and reqModel.subjectId > 0">
-              AND sr.id = ${reqModel.subjectId}
+              AND sr.id = #{reqModel.subjectId}
           </if>
           <if test="reqModel.subjectType != null and reqModel.subjectType > 0">
-              AND sr.subject_type = ${reqModel.subjectType}
+              AND sr.subject_type = #{reqModel.subjectType}
           </if>
           <if test="reqModel.testType != null and reqModel.testType > 0 ">
-              AND task.type_id = ${reqModel.testType}
+              AND task.type_id = #{reqModel.testType}
           </if>
         ORDER BY task.test_date DESC
     </select>

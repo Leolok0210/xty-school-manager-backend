@@ -21,11 +21,11 @@
             asr.enrollNum AS enrollNum
         FROM leisure_activity_courses_record lacr
         LEFT JOIN
-            (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_student_report WHERE type = 1 AND activity_id = ${activityId} AND deleted = 0 GROUP BY lenson_id) asr
+            (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_student_report WHERE type = 1 AND activity_id = #{activityId} AND deleted = 0 GROUP BY lenson_id) asr
                 ON lacr.id = asr.lenson_id
         WHERE lacr.deleted = 0
-        AND lacr.school_id = ${schoolId}
-        AND lacr.activity_id = ${activityId}
+        AND lacr.school_id = #{schoolId}
+        AND lacr.activity_id = #{activityId}
         <if test="name != null and name != ''">
             AND lacr.name LIKE CONCAT('%', #{name}, '%')
         </if>
@@ -64,7 +64,7 @@
             WHERE
             l.deleted = 0
             AND asar.type = 1
-            AND l.activity_id = ${activityId}
+            AND l.activity_id = #{activityId}
             GROUP BY
             l.lenson_id) avl
         ON lacr.id = avl.lenson_id
@@ -79,24 +79,24 @@
             WHERE
             l.deleted = 0
             AND asar.type = 2
-            AND l.activity_id = ${activityId}
+            AND l.activity_id = #{activityId}
             GROUP BY
             l.lenson_id) avlTwo
         ON lacr.id = avlTwo.lenson_id
         LEFT JOIN
-        (SELECT lenson_id,COUNT(1) AS preEnrollNum FROM activity_student_report WHERE type = 1 AND deleted = 0 AND activity_id = ${activityId} GROUP BY lenson_id) asrs
+        (SELECT lenson_id,COUNT(1) AS preEnrollNum FROM activity_student_report WHERE type = 1 AND deleted = 0 AND activity_id = #{activityId} GROUP BY lenson_id) asrs
         ON lacr.id = asrs.lenson_id
         LEFT JOIN
-        (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_student_report where deleted = 0 AND activity_id = ${activityId} GROUP BY lenson_id) asr
+        (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_student_report where deleted = 0 AND activity_id = #{activityId} GROUP BY lenson_id) asr
         ON lacr.id = asr.lenson_id
         WHERE lacr.deleted = 0
-        AND lacr.school_id = ${schoolId}
-        AND lacr.activity_id = ${activityId}
+        AND lacr.school_id = #{schoolId}
+        AND lacr.activity_id = #{activityId}
         <if test="name != null and name != ''">
             AND lacr.name LIKE CONCAT('%', #{name}, '%')
         </if>
         <if test="status != null">
-            HAVING enrollStatus = ${status}
+            HAVING enrollStatus = #{status}
         </if>
         ORDER BY lacr.create_time DESC
     </select>
@@ -120,15 +120,15 @@
             IF(COALESCE(lacr.quota_total, 0) - COALESCE(asr.enrollNum, 0) &lt;= 0, 1, 0) AS enrollStatus
         FROM leisure_activity_courses_record lacr
         LEFT JOIN
-        (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_volunteer_lenson where deleted = 0 AND activity_id = ${activityId} GROUP BY lenson_id) avl
+        (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_volunteer_lenson where deleted = 0 AND activity_id = #{activityId} GROUP BY lenson_id) avl
         ON lacr.id = avl.lenson_id
         LEFT JOIN
-        (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_student_report where deleted = 0 AND activity_id = ${activityId} GROUP BY lenson_id) asr
+        (SELECT lenson_id,COUNT(1) AS enrollNum FROM activity_student_report where deleted = 0 AND activity_id = #{activityId} GROUP BY lenson_id) asr
         ON lacr.id = asr.lenson_id
         WHERE lacr.deleted = 0
         AND lacr.status = 1
-        AND lacr.school_id = ${schoolId}
-        AND lacr.activity_id = ${activityId}
+        AND lacr.school_id = #{schoolId}
+        AND lacr.activity_id = #{activityId}
         <if test="name != null and name != ''">
             AND lacr.name LIKE CONCAT('%', #{name}, '%')
         </if>

@@ -89,7 +89,7 @@
             AND apt.process_type = #{reqModel.processType}
         </if>
         <if test="userId != null and userId > 0">
-            AND JSON_CONTAINS(task.approver_ids, <![CDATA['${userId}']]>, '$')
+            AND JSON_CONTAINS(task.approver_ids, <![CDATA['#{userId}']]>, '$')
         </if>
         <if test="reqModel.teacherId != null and reqModel.teacherId > 0">
             AND ai.start_user_id = #{reqModel.teacherId}

@@ -27,19 +27,19 @@
         LEFT JOIN sys_semester ss on blr.semester_id = ss.id
         WHERE blr.deleted = 0
         <if test="reqModel.schoolId != null and reqModel.schoolId > 0">
-            AND blr.school_id = ${reqModel.schoolId}
+            AND blr.school_id = #{reqModel.schoolId}
         </if>
         <if test="reqModel.schoolYear != null and reqModel.schoolYear != ''">
             AND blr.school_year = #{reqModel.schoolYear}
         </if>
         <if test="reqModel.semesterId != null and reqModel.semesterId > 0">
-            AND blr.semester_id = ${reqModel.semesterId}
+            AND blr.semester_id = #{reqModel.semesterId}
         </if>
         <if test="reqModel.classId != null and reqModel.classId > 0">
-            AND blr.class_id = ${reqModel.classId}
+            AND blr.class_id = #{reqModel.classId}
         </if>
         <if test="reqModel.studentId != null and reqModel.studentId > 0">
-            AND blr.student_id = ${reqModel.studentId}
+            AND blr.student_id = #{reqModel.studentId}
         </if>
         <if test="reqModel.startDate != null and reqModel.startDate != ''">
             AND blr.registration_date &gt;= #{reqModel.startDate}

@@ -71,8 +71,8 @@
             vol.service_seconds   AS serviceSeconds
         FROM volunteer_service vol
         WHERE vol.deleted = 0
-            AND vol.school_id = ${schoolId}
+            AND vol.school_id = #{schoolId}
             AND vol.school_year = #{schoolYear}
-            AND vol.student_id = ${studentId}
+            AND vol.student_id = #{studentId}
     </select>
 </mapper>
