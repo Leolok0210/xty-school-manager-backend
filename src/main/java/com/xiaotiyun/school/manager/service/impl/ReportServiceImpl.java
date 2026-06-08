@@ -4,8 +4,8 @@ import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.xiaotiyun.school.manager.dao.StudentMapper;
 import com.xiaotiyun.school.manager.mapper.AiReportMapper;
-import com.xiaotiyun.school.manager.mapper.StudentMapper;
 import com.xiaotiyun.school.manager.model.entity.AiReportEntity;
 import com.xiaotiyun.school.manager.model.entity.StudentEntity;
 import com.xiaotiyun.school.manager.service.ReportService;
@@ -105,7 +105,7 @@ public class ReportServiceImpl implements ReportService {
     private void createStudentListSheet(Sheet sheet, String queryParams, CellStyle headerStyle) {
         // 表頭
         Row headerRow = sheet.createRow(0);
-        String[] headers = {"學號", "姓名", "性別", "班級", "家長聯繫電話"};
+        String[] headers = {"學號", "姓名", "性別", "班級"};
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
@@ -133,10 +133,9 @@ public class ReportServiceImpl implements ReportService {
             for (StudentEntity student : students) {
                 Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(student.getStudentNo() != null ? student.getStudentNo() : "");
-                row.createCell(1).setCellValue(student.getName() != null ? student.getName() : "");
+                row.createCell(1).setCellValue(student.getChineseName() != null ? student.getChineseName() : "");
                 row.createCell(2).setCellValue(student.getGender() != null ? (student.getGender() == 1 ? "男" : "女") : "");
                 row.createCell(3).setCellValue(className != null ? className : "");
-                row.createCell(4).setCellValue(student.getContactPhone() != null ? student.getContactPhone() : "");
             }
         }
     }
@@ -149,7 +148,7 @@ public class ReportServiceImpl implements ReportService {
 
         // 根據類型添加數據
         if ("student_list".equals(reportType)) {
-            sb.append("\n學號,姓名,性別,班級,聯繫電話\n");
+            sb.append("\n學號,姓名,性別,班級\n");
             JSONObject params = JSON.parseObject(queryParams);
             Long schoolId = params != null ? params.getLong("schoolId") : null;
             if (schoolId != null) {
@@ -161,10 +160,9 @@ public class ReportServiceImpl implements ReportService {
                 if (students != null) {
                     for (StudentEntity student : students) {
                         sb.append(student.getStudentNo() != null ? student.getStudentNo() : "").append(",");
-                        sb.append(student.getName() != null ? student.getName() : "").append(",");
+                        sb.append(student.getChineseName() != null ? student.getChineseName() : "").append(",");
                         sb.append(student.getGender() != null ? (student.getGender() == 1 ? "男" : "女") : "").append(",");
-                        sb.append(","); // 班級
-                        sb.append(student.getContactPhone() != null ? student.getContactPhone() : "").append("\n");
+                        sb.append("\n");
                     }
                 }
             }
