@@ -291,6 +291,14 @@ public class AuthServiceImpl implements AuthService {
             // 创建一个schoolAndUserInfoList
             List<SchoolInfoResModel> schoolAndUserInfoList = new ArrayList<>();
 
+            // 批量获取所有学校信息，避免N+1查询
+            List<Long> schoolIds = userSchoolRelList.stream()
+                    .map(UserSchoolRelEntity::getSchoolId)
+                    .distinct()
+                    .collect(Collectors.toList());
+            Map<Long, SchoolEntity> schoolMap = schoolService.listByIds(schoolIds).stream()
+                    .collect(Collectors.toMap(SchoolEntity::getId, Function.identity()));
+
             // 循环userSchoolRelList，获取每个学校的用户信息，并且组装到res中
             for (UserSchoolRelEntity userSchoolRel : userSchoolRelList) {
 
@@ -298,7 +306,7 @@ public class AuthServiceImpl implements AuthService {
                 schoolInfo.setSchoolId(userSchoolRel.getSchoolId());
 
                 // 获取学校详细信息
-                SchoolEntity school = schoolService.getById(userSchoolRel.getSchoolId());
+                SchoolEntity school = schoolMap.get(userSchoolRel.getSchoolId());
                 if(school != null){
                     schoolInfo.setSchoolName(school.getName());
                     // 计算剩余天数
