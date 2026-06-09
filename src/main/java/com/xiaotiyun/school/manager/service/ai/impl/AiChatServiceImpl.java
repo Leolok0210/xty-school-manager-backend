@@ -459,7 +459,7 @@ public class AiChatServiceImpl implements AiChatService {
                 return accumulated;
             }
 
-            log.info("Agent API response (iteration {}): {}", iteration, responseBody);
+            log.warn("Agent API raw response (iteration {}): {}", iteration, responseBody);
             JSONObject qwenResponse = JSON.parseObject(responseBody);
             JSONArray choices = qwenResponse.getJSONArray("choices");
             if (choices == null || choices.isEmpty()) {
