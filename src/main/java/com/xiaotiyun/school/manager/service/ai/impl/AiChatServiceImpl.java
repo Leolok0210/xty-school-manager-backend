@@ -5,6 +5,7 @@ import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.xiaotiyun.school.manager.config.AiConfig;
 import com.xiaotiyun.school.manager.model.entity.AiChatMessageEntity;
 import com.xiaotiyun.school.manager.model.entity.AiChatSessionEntity;
@@ -416,7 +417,7 @@ public class AiChatServiceImpl implements AiChatService {
         JSONObject request = new JSONObject();
         request.put("model", aiConfig.getModel());
         request.put("messages", new com.alibaba.fastjson.JSONArray(messages));
-        request.put("tools", JSON.parseArray(JSON.toJSONString(skillRegistry.getToolDefinitions())));
+        request.put("tools", JSON.parseArray(JSON.toJSONString(skillRegistry.getToolDefinitions(), SerializerFeature.DisableCircularReferenceDetect)));
         request.put("tool_choice", "auto");
         request.put("max_tokens", 2048);
         return request;
