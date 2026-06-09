@@ -624,6 +624,15 @@ public class AiChatServiceImpl implements AiChatService {
             case "check_semester_grades": return "學期考試成績";
             case "conduct_check": return "獎懲記錄";
             case "attendance_check": return "考勤記錄";
+            case "add_student": return "創建學生";
+            case "update_student": return "更新學生資訊";
+            case "delete_student": return "刪除學生";
+            case "update_class_info": return "更新班級資訊";
+            case "add_exam_scores": return "錄入考試成績";
+            case "add_attendance_record": return "考勤記錄";
+            case "analyze_class_grades": return "班級成績分析";
+            case "check_attendance_alerts": return "考勤異常預警";
+            case "student_overview": return "學生綜合概覽";
             default: return "查詢結果";
         }
     }
