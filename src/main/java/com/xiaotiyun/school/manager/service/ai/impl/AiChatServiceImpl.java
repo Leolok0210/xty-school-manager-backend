@@ -463,7 +463,7 @@ public class AiChatServiceImpl implements AiChatService {
             JSONObject qwenResponse = JSON.parseObject(responseBody);
             JSONArray choices = qwenResponse.getJSONArray("choices");
             if (choices == null || choices.isEmpty()) {
-                log.error("Empty choices in API response, iteration {}", iteration);
+                log.error("Empty choices in API response, iteration {}, body: {}", iteration, responseBody);
                 accumulated.setContent("抱歉，AI 返回了空結果，請重新提問。");
                 pendingAgentStates.remove(sessionId);
                 return accumulated;
