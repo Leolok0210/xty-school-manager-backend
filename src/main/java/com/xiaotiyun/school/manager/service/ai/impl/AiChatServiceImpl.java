@@ -418,6 +418,7 @@ public class AiChatServiceImpl implements AiChatService {
         request.put("messages", new com.alibaba.fastjson.JSONArray(messages));
         request.put("tools", JSON.parseArray(JSON.toJSONString(skillRegistry.getToolDefinitions())));
         request.put("tool_choice", "auto");
+        request.put("max_tokens", 2048);
         return request;
     }
 
