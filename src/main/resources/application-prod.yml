@@ -10,8 +10,8 @@ spring:
     password: ${DB_PASSWORD:7XyQbbcdfgrG5*7w}
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
-      # 初始连接数
-      initial-size: 1
+      # 初始连接数（设为0延迟初始化，避免启动时数据库不可达导致应用卡死）
+      initial-size: 0
       # 最小连接池数量
       min-idle: 2
       # 最大连接池数量
