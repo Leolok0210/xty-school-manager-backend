@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: prod
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -25,6 +27,46 @@ spring:
 
 server:
   port: 8080
+
+file:
+  fileRootPath: /tmp/file
+  templateUrl: /tmp/file/template/
+  maxFileSize: 307200
+  minFileSize: 102400
+  maxLeaveFileSize: 5242880
+  filePrefix: /tmp/file
+
+xtySchool:
+  report:
+    url: http://127.0.0.1:18085
+
+H5Url: https://www.baidu.com/
+
+wxApp:
+  teacher:
+    corpId: ww9cd3dd4ad9f44afa
+    providerSecret: uC1wWTVV1P_HCIiKS_sg0YPYv7yUlaJ_pa8f0frJT6j2BRvSRKYGRxRywp4oUkk8
+    name: 莱茵达智校通
+    suiteId: wwa0e9272595f27bbb
+    suiteSecret: aE74FwgdReetxqslyHg6OijMpv8eTJS_Y-sMm6mZIko
+    H5Url: http://teacher.sms.xiaoti.cloud/#/pages/index/index
+    token: 3DGoByIEEwXdBzU29V2aF
+    AESKey: LdmznarNe618o5u9daNw98UUMQWkKmcgUwESgF3WnZt
+  student:
+    corpId: ww9cd3dd4ad9f44afa
+    suiteId: wwe948859afe1af425
+    suiteSecret: vumcY6qpoz6bZEa3pC1sjgt3knXFQ8yz72iI1m9c8hI
+    H5Url: http://192.168.8.131:5173/#/
+    token: zsc5JWK5
+    AESKey: Hdj2Qt2aYTxYL5M3l3sWOvkN3QUObCLqlZh8MTLFXcw
+
+wx:
+  miniapp:
+    appid: wxbeb071451150de57
+    secret: e3d0805477f7cc1c15909235fd7a81e7
+    url: https://api.weixin.qq.com/sns/jscode2session
+    indexPath: /pages/index/index
+    wechatNoticeIllustration: static/defaultEnterpriseWechatNoticeIllustration.png
 
 # Sa-Token配置
 sa-token:
