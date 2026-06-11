@@ -4,9 +4,51 @@ spring:
       matching-strategy: ant_path_matcher
   main:
     allow-circular-references: true
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://117.88.94.20:13049/xty_school_manager?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_general_ci&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: root
+    password: 7XyQbbcdfgrG5*7w
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 0
+      min-idle: 2
+      max-active: 5
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      max-evictable-idle-time-millis: 900000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
 
 server:
   port: 8080
+
+# Sa-Token配置
+sa-token:
+  token-name: token
+  timeout: 2592000
+  activity-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: false
+  token-strategy: memory
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*Mapper.xml
+  type-aliases-package: com.xiaotiyun.school.manager.model.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# AI Configuration
+ai:
+  api-key: tp-ckfhrvn08oio531bde2x5gtulk878jnu2r0o77gr2cfrfvne
+  api-url: https://token-plan-cn.xiaomimimo.com/v1/chat/completions
+  model: mimo-v2.5-pro
+  timeout: 120000
 
 # knife4j配置
 knife4j:
