@@ -87,9 +87,9 @@ mybatis-plus:
 
 # AI Configuration
 ai:
-  api-key: tp-ckfhrvn08oio531bde2x5gtulk878jnu2r0o77gr2cfrfvne
-  api-url: https://token-plan-cn.xiaomimimo.com/v1/chat/completions
-  model: mimo-v2.5-pro
+  api-key: sk-ef85ddf6f8ff4a7b9c72526fa6a03b35
+  api-url: https://api.deepseek.com/v1/chat/completions
+  model: deepseek-v4-pro
   timeout: 120000
 
 # knife4j配置
