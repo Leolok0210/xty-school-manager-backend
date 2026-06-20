@@ -26,6 +26,11 @@ public class AuthFilter implements Filter {
         "/v2/api-docs",
         "/v3/api-docs",
         "/api/transcript/details/class",
+        "/api/device/",
+        "/api/card/",
+        "/api/face/",
+        "/api/attendance/",
+        "/api/campus-photos/",
     };
 
     @Override
