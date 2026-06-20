@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -Dbuild.id=fix-password-2
 
 FROM eclipse-temurin:21-jre
 

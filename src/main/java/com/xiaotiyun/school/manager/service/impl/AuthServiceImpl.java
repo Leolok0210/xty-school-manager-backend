@@ -88,7 +88,13 @@ public class AuthServiceImpl implements AuthService {
             matched = inputPassword.equals(storedPassword);
             // 兼容前端 SHA256(salt+password) 加密
             if (!matched) {
-                matched = inputPassword.equals(cn.hutool.crypto.digest.DigestUtil.sha256Hex("salt_mBDwFRq_" + storedPassword));
+                try {
+                    java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+                    byte[] hash = md.digest(("salt_mBDwFRq_" + storedPassword).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    StringBuilder hex = new StringBuilder();
+                    for (byte b : hash) hex.append(String.format("%02x", b));
+                    matched = inputPassword.equals(hex.toString());
+                } catch (Exception ignored) { }
             }
         }
         if (!matched) {
