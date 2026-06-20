@@ -27,6 +27,10 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         "/favicon.ico",
                         "/health/check",
                         "/api/transcript/details/class",
+                        "/api/device/**",
+                        "/api/attendance/**",
+                        "/api/manage/device-attendance/**",
+                        "/api/campus-photos/**",
                         "/v2/api-docs/**",
                         "/v3/api-docs/**");
     }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaotiyun.school.manager.dao.DeviceTokenDao">
+    <select id="findByToken" resultType="com.xiaotiyun.school.manager.model.entity.DeviceTokenEntity">
+        SELECT * FROM device_token WHERE token = #{token} AND deleted = 0
+    </select>
+
+    <select id="findByDeviceSn" resultType="com.xiaotiyun.school.manager.model.entity.DeviceTokenEntity">
+        SELECT * FROM device_token WHERE device_sn = #{deviceSn} AND deleted = 0
+    </select>
+</mapper>
