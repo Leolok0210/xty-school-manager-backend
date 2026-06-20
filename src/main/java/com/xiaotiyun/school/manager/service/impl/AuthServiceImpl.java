@@ -86,6 +86,10 @@ public class AuthServiceImpl implements AuthService {
         } else {
             // 兼容 SHA256 格式或其他舊格式密碼
             matched = inputPassword.equals(storedPassword);
+            // 兼容前端 SHA256(salt+password) 加密
+            if (!matched) {
+                matched = inputPassword.equals(cn.hutool.crypto.digest.DigestUtil.sha256Hex("salt_mBDwFRq_" + storedPassword));
+            }
         }
         if (!matched) {
             throw new BusinessException(LanguageConstants.ACCOUNT_OR_PASSWORD_ERROR);
