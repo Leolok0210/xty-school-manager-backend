@@ -24,6 +24,14 @@ public class CampusPhotoManageController {
     public Result<CampusPhotoEntity> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("schoolId") Long schoolId) {
+        String name = file.getOriginalFilename();
+        String ext = (name != null && name.contains(".")) ? name.substring(name.lastIndexOf(".") + 1).toLowerCase() : "";
+        if (!java.util.Arrays.asList("jpg", "jpeg", "png", "webp", "mp4").contains(ext)) {
+            return Result.failed(ResultCode.FAILED);
+        }
+        if (file.getSize() > 50L * 1024 * 1024) {
+            return Result.failed(ResultCode.FAILED);
+        }
         try {
             CampusPhotoEntity entity = campusPhotoService.upload(file, schoolId);
             return Result.success(entity);

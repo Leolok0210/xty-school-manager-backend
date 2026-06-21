@@ -52,9 +52,13 @@ public class CampusPhotoController {
             return ResponseEntity.notFound().build();
         }
         Resource resource = new FileSystemResource(file);
-        String contentType = "image/jpeg";
-        if (fileName.endsWith(".png")) contentType = "image/png";
-        else if (fileName.endsWith(".webp")) contentType = "image/webp";
+        String lower = fileName.toLowerCase();
+        String contentType;
+        if (lower.endsWith(".png")) contentType = "image/png";
+        else if (lower.endsWith(".webp")) contentType = "image/webp";
+        else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) contentType = "image/jpeg";
+        else if (lower.endsWith(".mp4")) contentType = "video/mp4";
+        else contentType = "application/octet-stream";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
