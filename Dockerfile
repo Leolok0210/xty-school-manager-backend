@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean package -DskipTests -Dbuild.id=fix-password-2
+RUN mvn clean package -DskipTests -Dbuild.id=multipart-200mb
 
 FROM eclipse-temurin:21-jre
 
@@ -19,4 +19,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=5 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
 
-ENTRYPOINT ["java", "-Xmx256m", "-Xss256k", "-XX:MaxMetaspaceSize=128m", "-XX:ReservedCodeCacheSize=64m", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-Xmx256m", "-Xss256k", "-XX:MaxMetaspaceSize=128m", "-XX:ReservedCodeCacheSize=64m", "-XX:MaxRAMPercentage=75.0", "-Dspring.servlet.multipart.max-file-size=200MB", "-Dspring.servlet.multipart.max-request-size=200MB", "-jar", "/app/app.jar"]
