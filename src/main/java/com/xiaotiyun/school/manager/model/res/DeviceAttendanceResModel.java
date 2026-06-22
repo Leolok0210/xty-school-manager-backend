@@ -27,4 +27,10 @@ public class DeviceAttendanceResModel {
 
     @ApiModelProperty("设备序列号")
     private String deviceSn;
+
+    @ApiModelProperty("打卡方向(入校/出校原始值)")
+    private String direction;
+
+    @ApiModelProperty("依规则推导状态: normal/late/early，无规则时为null")
+    private String derivedStatus;
 }

@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean package -DskipTests -Dbuild.id=teacher-punch-split
+RUN mvn clean package -DskipTests -Dbuild.id=rule-derived-status
 
 FROM eclipse-temurin:21-jre
 
