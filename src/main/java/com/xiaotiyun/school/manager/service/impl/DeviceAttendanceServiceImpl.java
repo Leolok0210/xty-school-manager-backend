@@ -4,11 +4,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiaotiyun.school.manager.dao.DeviceAttendanceDao;
+import com.xiaotiyun.school.manager.dao.StudentMapper;
+import com.xiaotiyun.school.manager.dao.UserSchoolRelDao;
 import com.xiaotiyun.school.manager.model.entity.DeviceAttendanceEntity;
+import com.xiaotiyun.school.manager.model.entity.StudentEntity;
+import com.xiaotiyun.school.manager.model.entity.UserSchoolRelEntity;
 import com.xiaotiyun.school.manager.model.req.DeviceAttendanceReqModel;
 import com.xiaotiyun.school.manager.model.res.DeviceAttendanceResModel;
 import com.xiaotiyun.school.manager.service.DeviceAttendanceService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -20,6 +25,12 @@ import java.util.TimeZone;
 public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao, DeviceAttendanceEntity>
         implements DeviceAttendanceService {
 
+    @Autowired
+    private StudentMapper studentMapper;
+
+    @Autowired
+    private UserSchoolRelDao userSchoolRelDao;
+
     @Override
     public DeviceAttendanceResModel record(DeviceAttendanceReqModel reqModel) {
         DeviceAttendanceEntity entity = new DeviceAttendanceEntity();
@@ -29,6 +40,7 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
         entity.setStatus(reqModel.getStatus());
         entity.setClassId(reqModel.getClassId());
         entity.setDeviceSn(reqModel.getDeviceSn());
+        entity.setPersonType(resolvePersonType(reqModel.getStudentId()));
         save(entity);
 
         DeviceAttendanceResModel res = new DeviceAttendanceResModel();
@@ -50,7 +62,11 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
 
     @Override
     public List<DeviceAttendanceResModel> queryRecords(String date, Long classId) {
-        LambdaQueryWrapper<DeviceAttendanceEntity> wrapper = buildQueryWrapper(date, classId);
+        return queryRecordsByType(date, classId, "student");
+    }
+
+    private List<DeviceAttendanceResModel> queryRecordsByType(String date, Long classId, String personType) {
+        LambdaQueryWrapper<DeviceAttendanceEntity> wrapper = buildQueryWrapper(date, classId, personType);
         wrapper.orderByDesc(DeviceAttendanceEntity::getAttendanceTime);
         List<DeviceAttendanceEntity> entities = list(wrapper);
         return entities.stream().map(e -> {
@@ -59,6 +75,23 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
             res.setTime(e.getAttendanceTime());
             return res;
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * 依打卡上送的编号判断人员类型: 命中学生学号→student; 否则命中教师工号→teacher; 都不中→student(安全预设)
+     */
+    private String resolvePersonType(String number) {
+        if (number == null || number.isEmpty()) {
+            return "student";
+        }
+        boolean isStudent = studentMapper.exists(new LambdaQueryWrapper<StudentEntity>()
+                .eq(StudentEntity::getStudentNo, number));
+        if (isStudent) {
+            return "student";
+        }
+        boolean isTeacher = userSchoolRelDao.exists(new LambdaQueryWrapper<UserSchoolRelEntity>()
+                .eq(UserSchoolRelEntity::getUserNumber, number));
+        return isTeacher ? "teacher" : "student";
     }
 
     @Override
@@ -107,8 +140,8 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
     }
 
     @Override
-    public Map<String, Object> queryRecordsPage(int pageNum, int pageSize, String date, Long classId) {
-        LambdaQueryWrapper<DeviceAttendanceEntity> wrapper = buildQueryWrapper(date, classId);
+    public Map<String, Object> queryRecordsPage(int pageNum, int pageSize, String date, Long classId, String personType) {
+        LambdaQueryWrapper<DeviceAttendanceEntity> wrapper = buildQueryWrapper(date, classId, personType);
         wrapper.orderByDesc(DeviceAttendanceEntity::getAttendanceTime);
         Page<DeviceAttendanceEntity> mpPage = new Page<>(pageNum, pageSize);
         Page<DeviceAttendanceEntity> result = page(mpPage, wrapper);
@@ -125,8 +158,8 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
     }
 
     @Override
-    public Map<String, Object> statsForManage(String type, String date, Long classId) {
-        List<DeviceAttendanceResModel> records = queryRecords(date, classId);
+    public Map<String, Object> statsForManage(String type, String date, Long classId, String personType) {
+        List<DeviceAttendanceResModel> records = queryRecordsByType(date, classId, personType);
         long total = records.size();
         long normal = 0, late = 0, early = 0, missing = 0;
         for (DeviceAttendanceResModel r : records) {
@@ -163,7 +196,7 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
         return result;
     }
 
-    private LambdaQueryWrapper<DeviceAttendanceEntity> buildQueryWrapper(String date, Long classId) {
+    private LambdaQueryWrapper<DeviceAttendanceEntity> buildQueryWrapper(String date, Long classId, String personType) {
         LambdaQueryWrapper<DeviceAttendanceEntity> wrapper = new LambdaQueryWrapper<>();
         if (date != null && !date.isEmpty()) {
             try {
@@ -182,6 +215,13 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
         }
         if (classId != null) {
             wrapper.eq(DeviceAttendanceEntity::getClassId, classId);
+        }
+        if ("teacher".equals(personType)) {
+            wrapper.eq(DeviceAttendanceEntity::getPersonType, "teacher");
+        } else {
+            // 学生范围: 含历史 null 数据
+            wrapper.and(w -> w.ne(DeviceAttendanceEntity::getPersonType, "teacher")
+                    .or().isNull(DeviceAttendanceEntity::getPersonType));
         }
         return wrapper;
     }

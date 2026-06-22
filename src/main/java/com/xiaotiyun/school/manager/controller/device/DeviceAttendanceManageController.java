@@ -23,10 +23,11 @@ public class DeviceAttendanceManageController {
     public Result<Map<String, Object>> queryRecords(
             @ApiParam("日期 yyyy-MM-dd") @RequestParam(required = false) String date,
             @ApiParam("班级ID") @RequestParam(required = false) Long classId,
+            @ApiParam("人员类型 student/teacher") @RequestParam(required = false) String personType,
             @ApiParam("页码") @RequestParam(defaultValue = "1") int pageNum,
             @ApiParam("每页条数") @RequestParam(defaultValue = "10") int pageSize) {
         try {
-            Map<String, Object> result = deviceAttendanceService.queryRecordsPage(pageNum, pageSize, date, classId);
+            Map<String, Object> result = deviceAttendanceService.queryRecordsPage(pageNum, pageSize, date, classId, personType);
             return Result.success(result);
         } catch (Exception e) {
             return Result.failed(ResultCode.FAILED);
@@ -38,9 +39,10 @@ public class DeviceAttendanceManageController {
     public Result<Map<String, Object>> getStats(
             @ApiParam("类型: day/week/month") @RequestParam(defaultValue = "day") String type,
             @ApiParam("日期 yyyy-MM-dd") @RequestParam String date,
-            @ApiParam("班级ID") @RequestParam(required = false) Long classId) {
+            @ApiParam("班级ID") @RequestParam(required = false) Long classId,
+            @ApiParam("人员类型 student/teacher") @RequestParam(required = false) String personType) {
         try {
-            Map<String, Object> result = deviceAttendanceService.statsForManage(type, date, classId);
+            Map<String, Object> result = deviceAttendanceService.statsForManage(type, date, classId, personType);
             return Result.success(result);
         } catch (Exception e) {
             return Result.failed(ResultCode.FAILED);

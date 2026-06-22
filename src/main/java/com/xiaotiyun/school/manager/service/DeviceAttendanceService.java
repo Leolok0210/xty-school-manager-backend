@@ -17,7 +17,7 @@ public interface DeviceAttendanceService extends IService<DeviceAttendanceEntity
 
     Object stats(String type, String date, Long classId);
 
-    Map<String, Object> queryRecordsPage(int pageNum, int pageSize, String date, Long classId);
+    Map<String, Object> queryRecordsPage(int pageNum, int pageSize, String date, Long classId, String personType);
 
-    Map<String, Object> statsForManage(String type, String date, Long classId);
+    Map<String, Object> statsForManage(String type, String date, Long classId, String personType);
 }

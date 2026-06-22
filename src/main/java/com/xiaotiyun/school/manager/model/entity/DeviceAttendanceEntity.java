@@ -21,4 +21,6 @@ public class DeviceAttendanceEntity extends BaseEntity {
     private Long classId;
     /** 设备序列号 */
     private String deviceSn;
+    /** 人员类型 (student:学生 teacher:教师) */
+    private String personType;
 }
