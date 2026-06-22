@@ -23,6 +23,7 @@ import com.xiaotiyun.school.manager.model.res.DeviceAttendanceResModel;
 import com.xiaotiyun.school.manager.service.DeviceAttendanceService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -44,15 +45,19 @@ public class DeviceAttendanceServiceImpl extends ServiceImpl<DeviceAttendanceDao
     private UserSchoolRelDao userSchoolRelDao;
 
     @Autowired
+    @Lazy
     private TeacherAttendanceRuleDao teacherAttendanceRuleDao;
 
     @Autowired
+    @Lazy
     private StudentAttendanceRuleDao studentAttendanceRuleDao;
 
     @Autowired
+    @Lazy
     private UserDeptRelDao userDeptRelDao;
 
     @Autowired
+    @Lazy
     private SysClassDao sysClassDao;
 
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
